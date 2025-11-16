@@ -515,10 +515,6 @@ def DQE_F1_section(tq_section_list, prediction_section_list, ts_len, gt_num=None
                     fq_dis_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
                 else:
                     fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
-                    # new
-                    # fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                    # fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-                    # ori
                     fq_dis_d_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
                     fq_dis_e_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
 
@@ -532,10 +528,6 @@ def DQE_F1_section(tq_section_list, prediction_section_list, ts_len, gt_num=None
                         fq_dis_section_list[i] = [fq_near_d_i_end, tq_section_i_start]
                     else:
                         fq_dis_section_i_mid = (fq_near_d_i_end + tq_section_i_start) / 2
-                        # new
-                        # fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                        # fq_dis_e_section_list[i] = [fq_dis_section_i_mid, tq_section_i_start]
-                        # ori
                         fq_dis_d_section_list[i] = [fq_dis_section_i_mid, tq_section_i_start]
                         fq_dis_e_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
                 if weight_fq_near_delay <= 0:
@@ -546,10 +538,6 @@ def DQE_F1_section(tq_section_list, prediction_section_list, ts_len, gt_num=None
                         fq_dis_section_list[i + 1] = [tq_section_i_end, ts_len]
                     else:
                         fq_dis_section_i_mid = (tq_section_i_last_end + fq_near_e_section_i_start) / 2
-                        # new
-                        # fq_dis_d_section_list[i] = [tq_section_i_last_end, fq_dis_section_i_mid]
-                        # fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-                        # ori
                         fq_dis_d_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
                         fq_dis_e_section_list[i] = [tq_section_i_last_end, fq_dis_section_i_mid]
 
@@ -577,10 +565,6 @@ def DQE_F1_section(tq_section_list, prediction_section_list, ts_len, gt_num=None
                     fq_dis_section_list[i] = [fq_near_d_i_end, fq_near_e_section_i_start]
                 else:
                     fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
-                    # new
-                    # fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                    # fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-                    # ori
                     fq_dis_d_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
                     fq_dis_e_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
 
@@ -591,10 +575,6 @@ def DQE_F1_section(tq_section_list, prediction_section_list, ts_len, gt_num=None
                         fq_dis_section_list[i] = [fq_near_d_i_end, tq_section_i_start]
                     else:
                         fq_dis_section_i_mid = (fq_near_d_i_end + tq_section_i_start) / 2
-                        # new
-                        # fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                        # fq_dis_e_section_list[i] = [fq_dis_section_i_mid, tq_section_i_start]
-                        # ori
                         fq_dis_d_section_list[i] = [fq_dis_section_i_mid, tq_section_i_start]
                         fq_dis_e_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
                 if weight_fq_near_delay <= 0:
@@ -603,10 +583,6 @@ def DQE_F1_section(tq_section_list, prediction_section_list, ts_len, gt_num=None
                         fq_dis_section_list[i] = [tq_section_i_last_end, fq_near_e_section_i_start]
                     else:
                         fq_dis_section_i_mid = (tq_section_i_last_end + fq_near_e_section_i_start) / 2
-                        # new
-                        # fq_dis_d_section_list[i] = [fq_dis_section_list[i][0], fq_dis_section_i_mid]
-                        # fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_dis_section_list[i][1]]
-                        # ori
                         fq_dis_d_section_list[i] = [fq_dis_section_i_mid, fq_dis_section_list[i][1]]
                         fq_dis_e_section_list[i] = [fq_dis_section_list[i][0], fq_dis_section_i_mid]
 
