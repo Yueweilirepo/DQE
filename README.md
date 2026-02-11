@@ -1,7 +1,7 @@
 <h1 align="center">DQE: A Dual-Quality Evaluation Metric for Time Series Anomaly Detection</h1>
 
 
-This a repository contains the code for DQE (Dual-Quality Evaluation Metric), a novel evaluation metric for assessing anomaly detection in time series data. 
+This repository contains the code for DQE (Dual-Quality Evaluation Metric), a novel evaluation metric for assessing anomaly detection in time series data. 
 DQE is designed around the principles of locality and
 integrality, which holistically synthesizes true positive quality (TQ) and true positive quality (FQ), enabling a fine-grained evaluation of timely, early and late detections.
 The methodology is detailed in our paper, demonstrating that DQE provides more reliable and
