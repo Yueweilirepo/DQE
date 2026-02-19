@@ -3,6 +3,7 @@ import numpy as np
 import math
 import copy
 
+from metrics.AUCs_Compute import compute_auprc,compute_auc
 from metrics.eTaPR_pkg import f1_score_etapr
 from metrics.metrics_pa import PointAdjustKPercent
 from metrics.pate.PATE_metric import PATE
@@ -213,11 +214,14 @@ class basic_metricor():
             return L, fpr, tpr
         return L
 
-    def metric_ROC(self, label, score):
-        return metrics.roc_auc_score(label, score)
+    def metric_ROC(self, label, score, plot_flag=False):
+        return compute_auc(label, score, plot_flag=plot_flag)
+        # return metrics.roc_auc_score(label, score)
 
-    def metric_PR(self, label, score):
-        return metrics.average_precision_score(label, score)
+    def metric_PR(self, label, score, plot_flag=False):
+        return compute_auprc(label, score, plot_flag=plot_flag)
+        # return metrics.average_precision_score(label, score)
+
 
     def metric_PointF1(self, label, score, preds=None):
         if preds is None:
@@ -264,7 +268,8 @@ class basic_metricor():
             Affiliation_Recall = affiliation_metrics['Affiliation_Recall']
             Affiliation_F1 = 2 * Affiliation_Precision * Affiliation_Recall / (
                         Affiliation_Precision + Affiliation_Recall + self.eps)
-
+        if np.isnan(Affiliation_F1):
+            Affiliation_F1 = 0
         return Affiliation_F1
 
     def metric_RF1(self, label, score, preds=None):
@@ -316,6 +321,7 @@ class basic_metricor():
             eTaPR_F1 = max(eTaPR_f1_score_list)
 
         else:
+            # preds_int = preds.astype(int)
             if not np.any(preds):
                 eTaPR_precision, eTaPR_recall, eTaPR_F1 = 0.0, 0.0, 0.0
             else:
@@ -325,24 +331,21 @@ class basic_metricor():
 
         return eTaPR_F1
 
-    def metric_DQE(self, label, score, preds=None, parameter_dict=None, near_single_side_range=None):
+    def metric_DQE(self, label, score, preds=None, near_single_side_range=None):
         if preds is not None:
-            dqe, dqe_w_tq, dqe_w_fq_near, dqe_w_fq_distant = DQE(label,
-                          preds,
-                          parameter_dict=parameter_dict,
-                          near_single_side_range=near_single_side_range,
-                          cal_components=True
-                          )
-
+            dqe_res_ts = DQE(label,
+                      preds,
+                      near_single_side_range=near_single_side_range,
+                      cal_components=True
+                      )
         else:
-            dqe, dqe_w_tq, dqe_w_fq_near, dqe_w_fq_distant = DQE(label,
+            dqe_res_ts = DQE(label,
                           score,
-                          parameter_dict=parameter_dict,
                           near_single_side_range=near_single_side_range,
                           cal_components=True
                           )
 
-        return dqe, dqe_w_tq, dqe_w_fq_near, dqe_w_fq_distant
+        return dqe_res_ts
 
     def metric_PATE_F1(self, label, score, preds=None, e_buffer=None, d_buffer=None):
         if preds is None:

@@ -87,8 +87,33 @@ class LSTMAD():
         self.eps = 1e-10
         
     def fit(self, data):
-        tsTrain = data[:int((1-self.validation_size)*len(data))]
-        tsValid = data[int((1-self.validation_size)*len(data)):]
+        # --- 修改开始 ---
+        # 计算生成一个样本所需的最小长度
+        min_len = self.window_size + self.pred_len
+
+        # 原始切分点
+        split_idx = int((1 - self.validation_size) * len(data))
+
+        # 检查验证集是否足够长
+        if len(data) - split_idx < min_len:
+            print(
+                f"警告: 验证集过小 ({len(data) - split_idx})，无法满足窗口大小 ({self.window_size}) + 预测长度 ({self.pred_len})。")
+            # 强制调整 split_idx，给验证集留出刚好够用的数据（或者多留一点）
+            # 这里我们留出 min_len + 5 个数据点以防万一，同时确保不让训练集变成负数
+            ensure_valid_len = min_len + 2
+            split_idx = len(data) - ensure_valid_len
+
+            if split_idx < min_len:
+                raise ValueError(f"数据总长度 ({len(data)}) 太短，无法同时满足训练集和验证集的窗口构建需求。")
+
+            print(f"已动态调整切分点，验证集长度调整为: {len(data) - split_idx}")
+
+        tsTrain = data[:split_idx]
+        tsValid = data[split_idx:]
+        # --- 修改结束 ---
+
+        # tsTrain = data[:int((1-self.validation_size)*len(data))]
+        # tsValid = data[int((1-self.validation_size)*len(data)):]
 
         train_loader = DataLoader(
             ForecastDataset(tsTrain, window_size=self.window_size, pred_len=self.pred_len),

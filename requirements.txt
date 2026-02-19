@@ -90,11 +90,13 @@ termcolor==2.4.0
 threadpoolctl==3.4.0
 tokenizers==0.21.1
 tomli==2.3.0
+torch==2.3.0
+torchinfo==1.8.0
 tqdm==4.66.2
 transformers==4.50.2
 tsfresh==0.20.2
 tslearn==0.6.3
-typing_extensions==4.5.0
+typing_extensions==4.15.0
 tzdata==2024.1
 urllib3==2.2.1
 Werkzeug==3.0.2

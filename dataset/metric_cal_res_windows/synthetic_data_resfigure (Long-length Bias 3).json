@@ -1,5 +1,0 @@
-[
-{"VUS-ROC":1.0,"VUS-PR":1.0,"AUC-ROC":1.0,"AUC-PR":1.0,"PATE":1.0,"DQE":1.0,"AF":1.0,"eTaF":1.0,"Original-F":1.0,"PA-F":1.0,"\%K-PA-F":1.0,"DTPA-F":1.0,"LS-F":1.0,"RF":1.0},
-{"VUS-ROC":0.63,"VUS-PR":0.39,"AUC-ROC":0.86,"AUC-PR":0.76,"PATE":0.89,"DQE":0.31,"AF":0.5,"eTaF":0.5,"Original-F":0.83,"PA-F":0.83,"\%K-PA-F":0.83,"DTPA-F":0.83,"LS-F":0.75,"RF":0.5},
-{"VUS-ROC":0.6,"VUS-PR":0.36,"AUC-ROC":0.64,"AUC-PR":0.41,"PATE":0.72,"DQE":0.65,"AF":0.8,"eTaF":0.8,"Original-F":0.44,"PA-F":0.44,"\%K-PA-F":0.44,"DTPA-F":0.44,"LS-F":0.57,"RF":0.8}
-]

@@ -1,7 +1,0 @@
-[
-{"VUS-ROC":1.0,"VUS-PR":1.0,"AUC-ROC":1.0,"AUC-PR":1.0,"PATE":1.0,"DQE":1.0,"AF":1.0,"eTaF":1.0,"Original-F":1.0,"\%K-PA-F":1.0,"RF":1.0},
-{"VUS-ROC":0.58,"VUS-PR":0.23,"AUC-ROC":0.57,"AUC-PR":0.21,"PATE":0.63,"DQE":0.81,"AF":0.98,"eTaF":0.73,"Original-F":0.26,"\%K-PA-F":0.26,"RF":0.48},
-{"VUS-ROC":0.58,"VUS-PR":0.23,"AUC-ROC":0.57,"AUC-PR":0.21,"PATE":0.63,"DQE":0.68,"AF":0.98,"eTaF":0.73,"Original-F":0.26,"\%K-PA-F":0.26,"RF":0.48},
-{"VUS-ROC":0.66,"VUS-PR":0.37,"AUC-ROC":0.65,"AUC-PR":0.35,"PATE":0.71,"DQE":0.86,"AF":0.99,"eTaF":0.79,"Original-F":0.46,"\%K-PA-F":1.0,"RF":0.48},
-{"VUS-ROC":0.66,"VUS-PR":0.37,"AUC-ROC":0.65,"AUC-PR":0.35,"PATE":0.71,"DQE":0.82,"AF":1.0,"eTaF":0.79,"Original-F":0.46,"\%K-PA-F":1.0,"RF":0.48}
-]
