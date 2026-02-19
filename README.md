@@ -2,7 +2,7 @@
 Anomaly Detection</h1>
 
 
-This repository contains the code for DQE (Detection Quality Evaluation metric), a novel evaluation metric for assessing anomaly detection in time series data. 
+This b repository contains the code for DQE (Detection Quality Evaluation metric), a novel evaluation metric for assessing anomaly detection in time series data. 
 DQE is designed based on detection semantics, which holistically synthesizes anomaly capture quality,near-miss detection quality, and false alarm detection quality, enabling a fine-grained evaluation.
 The methodology is detailed in our paper, demonstrating that DQE provides more reliable, discriminative, robust, and interpretable evaluations through experiments with both synthetic and real-world data.
 
