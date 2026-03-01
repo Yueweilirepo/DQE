@@ -10,7 +10,8 @@ from dqe.dqe_metric import write_json, DQE_multi_data
 if __name__ == '__main__':
     ## ArgumentParser
     parser = argparse.ArgumentParser(description='Running DQE real-world experiments (anomaly event level)')
-    parser.add_argument('--exp_name', type=str, default='WSD case')
+    parser.add_argument('--exp_name', type=str, default='WSD')
+    parser.add_argument('--file_index', type=str, default='')
     parser.add_argument('--print', type=bool, default=True)
     parser.add_argument('--test_time', type=bool, default=True)
     args = parser.parse_args()
@@ -40,6 +41,13 @@ if __name__ == '__main__':
     method_dqe_res_dict = {}
 
     for ori_file in ori_file_list:
+        file_index = ori_file.split("_")[0]
+        dataset_name = ori_file.split("_")[1]
+        # file filter
+        if args.file_index != '':
+            if file_index != args.file_index:
+                continue
+
         # dataset filter
         dataset_name = ori_file.split("_")[1]
         if dataset_name not in dataset_name_list:
@@ -65,11 +73,14 @@ if __name__ == '__main__':
             output_dict[dataset_file] = data[method_name]
 
         # cal dqe for multi ts
-        deq_res = DQE_multi_data(ts_dict, output_dict, gt_dict, thresh_num=100, cal_components=True, method_name=method_name)
+        if args.file_index != '':
+            deq_res = DQE_multi_data(ts_dict, output_dict, gt_dict, thresh_num=100, cal_components=True, method_name=method_name, return_each_anomaly_score=True)
+        else:
+            deq_res = DQE_multi_data(ts_dict, output_dict, gt_dict, thresh_num=100, cal_components=True, method_name=method_name)
         method_dqe_res_dict[method_name] = deq_res
 
     dataset_save_str = dataset_name_list[0]
     for dataset_name in dataset_name_list[1:]:
         dataset_save_str+=("_"+dataset_name)
-    multi_ts_res_save_path = res_dir + "multi_ts_res/" + "multi_ts_res_" + dataset_save_str + ".json"
+    multi_ts_res_save_path = res_dir + "multi_ts_res/" + "multi_ts_res_" + dataset_save_str + args.file_index+ ".json"
     write_json(multi_ts_res_save_path,method_dqe_res_dict)

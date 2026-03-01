@@ -979,13 +979,6 @@ def cal_dqe_matrix(ts_dict: dict, output_dict: dict, gt_dict: dict, thresh_num=1
             proximity_chunks_global.append(matrix_proximity)
             false_alarm_chunks_global.append(matrix_false_alarm)
 
-        dqe_chunks_global.append(dqe_matrix)
-
-        if cal_components:
-            cap_chunks_global.append(matrix_cap)
-            proximity_chunks_global.append(matrix_proximity)
-            false_alarm_chunks_global.append(matrix_false_alarm)
-
     if cal_components:
         chunks_global_dict = {
             "dqe_chunks_global": dqe_chunks_global,
@@ -1016,7 +1009,7 @@ def write_json(save_path, single_dict):
 
 
 def DQE_multi_data(ts_dict: dict, output_dict: dict, gt_dict: dict, thresh_num=100, cal_components=False,
-                   method_name=None):
+                   method_name=None, return_each_anomaly_score=False):
     # merge local dqe for each ts
 
     # cal matrix
@@ -1056,15 +1049,35 @@ def DQE_multi_data(ts_dict: dict, output_dict: dict, gt_dict: dict, thresh_num=1
         false_alarm = false_alarm_matrix_global_mean_v.mean()
 
     if cal_components:
-        return {"dqe": dqe,
+        if return_each_anomaly_score:
+            return {"dqe": dqe,
 
-                "cap": cap,
-                "proximity": proximity,
-                "false_alarm": false_alarm,
-                }
+                    "cap": cap,
+                    "near_miss": proximity,
+                    "false_alarm": false_alarm,
+
+                    "dqe_list": dqe_matrix_global_mean_v.tolist(),
+
+                    "cap_list": cap_matrix_global_mean_v.tolist(),
+                    "near_miss_list": proximity_matrix_global_mean_v.tolist(),
+                    "false_alarm_list": false_alarm_matrix_global_mean_v.tolist(),
+                    }
+        else:
+            return {"dqe": dqe,
+
+                    "cap": cap,
+                    "near_miss": proximity,
+                    "false_alarm": false_alarm,
+                    }
     else:
-        return {"dqe": dqe,
-                }
+        if return_each_anomaly_score:
+            return {"dqe": dqe,
+
+                    "dqe_list": dqe_matrix_global_mean_v,
+                    }
+        else:
+            return {"dqe": dqe,
+                    }
 
 
 def cal_local_dqe(row_mean_real_detection,

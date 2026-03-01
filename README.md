@@ -8,8 +8,6 @@ Anomaly Detection</h1>
 
 This repository contains the implementation of Detection Quality Evaluation (DQE), a novel metric for time series anomaly detection.
 DQE is designed from a detection semantics perspective. It holistically synthesizes anomaly capture quality, near-miss detection quality, and false alarm detection quality, enabling fine-grained evaluation.
-
-
 [//]: # (The methodology is detailed in our paper, demonstrating that DQE provides more reliable, discriminative, robust, and interpretable evaluations through experiments with both synthetic and real-world data.)
 The full methodology is described in our paper, where extensive experiments on both synthetic and real-world data demonstrate that DQE provides reliable, discriminative, robust, interpretable evaluations compared to existing metrics.
 
@@ -180,6 +178,20 @@ python case_analysis.py --exp_name "UCR case"
 ```
 
 The parameter `exp_name` can be set to one of the following values: ["UCR case", "WSD case", "AUC-ROC/AUC-PR issue case"]. 
+
+
+To get the anomaly-level evaluation results of DQE, execute the Python script `anomaly_event_level_evaluation_dqe.py` by entering the following command:
+
+```bash
+python anomaly_event_level_evaluation_dqe.py --exp_name "UCR"
+```
+
+
+The parameter `exp_name` can be set to one of the following values: ["UCR", "WSD"]. Another parameter `file_index` which is the file index number in the dataset can be set to get DQE scores for each anomaly by entering the following command:
+
+```bash
+python anomaly_event_level_evaluation_dqe.py --exp_name "UCR"  --file_index "452"
+```
 
 
 To reproduce the robustness experiments of existing metrics,
