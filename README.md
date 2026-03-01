@@ -187,7 +187,9 @@ python anomaly_event_level_evaluation_dqe.py --exp_name "UCR"
 ```
 
 
-The parameter `exp_name` can be set to one of the following values: ["UCR", "WSD"]. Another parameter `file_index` which is the file index number in the dataset can be set to get DQE scores for each anomaly by entering the following command:
+[//]: # (The parameter `exp_name` can be set to one of the following values: ["UCR", "WSD"]. Another parameter `file_index` which is the file index number in the dataset can be set to get DQE scores for each anomaly by entering the following command:)
+The parameter exp_name can be set to either "UCR" or "WSD".
+The parameter file_index, which specifies the index of a file in the dataset, can be used to obtain DQE scores for each anomaly event by running the following command:
 
 ```bash
 python anomaly_event_level_evaluation_dqe.py --exp_name "UCR"  --file_index "452"
