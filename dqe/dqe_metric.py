@@ -331,7 +331,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
                 if fq_dis_section_i_mid != None:
                     split_line_set.add(fq_dis_section_i_mid)
 
-    # split prediction from segments to events (second circle,prediction_interval_num*gt_num)
+    # split prediction from segments to events
     prediction_events = split_intervals(prediction_section_list, split_line_set)
 
     # detection event group
@@ -345,7 +345,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
     fq_dis_e_prediction_group_list = [[] for _ in range(gt_num)]
     fq_dis_d_prediction_group_list = [[] for _ in range(gt_num + 1)]
 
-    # get local prediction event group (third circle,prediction_event_num*gt_num*4)
+    # get local prediction event group
     for i, basic_interval in enumerate(prediction_events):
         # tq_group
         for j, area in enumerate(tq_section_list):
@@ -377,7 +377,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
             if pred_in_area(basic_interval, area):
                 fq_dis_d_prediction_group_list[j].append(basic_interval)
 
-    # deal the mid one (not need here)
+    # deal the mid one
     for i in range(gt_num):
         if i >= 1 and i <= gt_num:
             if fq_dis_d_prediction_group_list[i] != [] and fq_dis_e_prediction_group_list[i] != []:
@@ -392,15 +392,9 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
                     fq_dis_d_prediction_group_list[i].pop()
                     fq_dis_e_prediction_group_list[i][0] = [f_dis_d_last_pred[0], f_dis_e_first_pred[1]]
 
-    # fq_near_early
-    fq_near_e_score_list = np.arange(gt_num, dtype=np.float64)
-
-    # fq_near_delay
-    fq_near_d_score_list = np.arange(gt_num + 1, dtype=np.float64)
-
-    mp_fq_near_list = [[] for _ in range(gt_num)]  # item num = pred num
-    co_fq_near_list = [[] for _ in range(gt_num)]  # item num = 2
-    td_fq_near_list = [[] for _ in range(gt_num)]  # item num = 2
+    mp_fq_near_list = [[] for _ in range(gt_num)]
+    co_fq_near_list = [[] for _ in range(gt_num)]
+    td_fq_near_list = [[] for _ in range(gt_num)]
     fq_near_score_list = np.arange(gt_num, dtype=np.float64)
 
     # cal score function,tq_near score
@@ -460,7 +454,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
 
         fq_near_score_list[i] = score_fq_near
 
-    # adjust near-miss score,see both sides
+    # adjust near-miss score
     adjust_score_fq_near_list = deepcopy(fq_near_score_list)
 
     for i in range(gt_num):
