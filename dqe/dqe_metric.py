@@ -584,14 +584,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         # cal dqe
         precision_tq_pred_group = tq_prediction_group_list[i]
 
-        pred_group_integral_recall_tq = 0
-
-        for j, basic_interval in enumerate(precision_tq_pred_group):
-            if basic_interval != []:
-                cal_integral_basic_interval_gt_recall = (basic_interval[1] - basic_interval[0])
-                pred_group_integral_recall_tq += cal_integral_basic_interval_gt_recall
-
-        if pred_group_integral_recall_tq > 0:
+        if precision_tq_pred_group != []:
             detected_score = 1
         else:
             detected_score = 0
