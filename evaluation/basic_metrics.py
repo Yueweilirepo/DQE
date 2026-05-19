@@ -331,19 +331,21 @@ class basic_metricor():
 
         return eTaPR_F1
 
-    def metric_DQE(self, label, score, preds=None, near_single_side_range=None):
+    def metric_DQE(self, label, score, preds=None, near_single_side_range=None, cal_components=False, per_anomaly_res=False):
         if preds is not None:
             dqe_res_ts = DQE(label,
-                      preds,
-                      near_single_side_range=near_single_side_range,
-                      cal_components=True
-                      )
+                             preds,
+                             near_single_side_range=near_single_side_range,
+                             cal_components=cal_components,
+                             per_anomaly_res=per_anomaly_res,
+                             )
         else:
             dqe_res_ts = DQE(label,
-                          score,
-                          near_single_side_range=near_single_side_range,
-                          cal_components=True
-                          )
+                             score,
+                             near_single_side_range=near_single_side_range,
+                             cal_components=cal_components,
+                             per_anomaly_res=per_anomaly_res
+                             )
 
         return dqe_res_ts
 

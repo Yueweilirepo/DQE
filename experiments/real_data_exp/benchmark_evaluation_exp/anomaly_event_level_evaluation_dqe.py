@@ -12,12 +12,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Running DQE real-world experiments (anomaly event level)')
     parser.add_argument('--exp_name', type=str, default='WSD')
     parser.add_argument('--file_index', type=str, default='')
-    parser.add_argument('--print', type=bool, default=True)
-    parser.add_argument('--test_time', type=bool, default=True)
     args = parser.parse_args()
 
 
-    methods_list = ['SR', 'CNN', 'Sub_LOF', 'FFT', 'KMeansAD_U', 'Sub_KNN', 'TimesNet']
+    methods_list = ['CNN', 'Sub_LOF', 'FFT', 'KMeansAD_U', 'TimesNet']
 
     dataset_name_list = [
         # 'WSD',

@@ -30,8 +30,10 @@ if __name__ == '__main__':
     ori_data_dir = dataset_dir + "TSB-AD-U/"
     res_save_dir = res_dir + "metric_cal_res_windows/"
     single_file_res_save_dir = res_dir + "single_file_evaluation_res/"
+    single_file_consume_time_save_dir = dataset_dir + "single_file_consume_time/"
 
-    methods_list = ['SR', 'KMeansAD_U', 'Sub_KNN', 'TimesNet', 'CNN', 'Sub_LOF', 'FFT']
+
+    methods_list = ['KMeansAD_U', 'TimesNet', 'CNN', 'Sub_LOF', 'FFT']
 
     file_path_dict = {}
     dataset_methods_file_list = os.listdir(method_pred_file_dir)
@@ -44,11 +46,13 @@ if __name__ == '__main__':
 
     dataset_name_list = [
                          'WSD',
-                         'YAHOO',
+                         # 'YAHOO',
                          'UCR'
     ]
 
     file_method_metric_dict = {} # save
+    file_method_metric_consume_time_dict = {} # save
+    dqe_list = []
     for i, dataset_file_name in enumerate(dataset_methods_file_list):
 
         # dataset filter
@@ -56,7 +60,11 @@ if __name__ == '__main__':
         if dataset_name not in dataset_name_list:
             continue
 
+        single_file_res_save_path = single_file_res_save_dir + dataset_name + "/" + dataset_file_name
+        single_file_consume_time_save_path = single_file_consume_time_save_dir + dataset_name + "/" + dataset_file_name
+
         file_method_metric_dict[dataset_file_name] = {}
+        file_method_metric_consume_time_dict[dataset_file_name] = {}
 
         data_set_choose_file_path = file_path_dict[dataset_file_name]
         with open(data_set_choose_file_path, "r", encoding="utf-8") as file:
@@ -78,20 +86,37 @@ if __name__ == '__main__':
 
             ori_data = df.iloc[:, 0:-1].values.astype(float)
             label = df['Label'].astype(int).to_numpy()
+
             slidingWindow = find_length_rank(ori_data, rank=1)
 
             output = methods_choose_outputs
             output_array = np.array(output)
 
-
             metric_score_dict,metrics_consume_time_dict = get_metrics(output_array, label, slidingWindow=slidingWindow, thre=100)
+            if args.print:
+                print(" metric_score_dict",metric_score_dict)
 
             file_method_metric_dict[dataset_file_name][method_name] = metric_score_dict
+            file_method_metric_consume_time_dict[dataset_file_name][method_name] = metrics_consume_time_dict
 
-        # save single file evaluate res
-        single_file_res = {}
-        single_file_res[dataset_file_name] = file_method_metric_dict[dataset_file_name]
+            dqe_list.append(metric_score_dict["dqe"])
 
+            # save one file evaluation result across all methods
+            create_path(single_file_res_save_path)
+            create_path(single_file_consume_time_save_path)
+
+            # save single file evaluate res
+            single_file_res = {}
+            single_file_res[dataset_file_name] = file_method_metric_dict[dataset_file_name]
+            single_file_time_res = {}
+            single_file_time_res[dataset_file_name] = file_method_metric_consume_time_dict[dataset_file_name]
+
+
+            # save
+            with open(single_file_res_save_path, 'w', encoding='utf-8') as json_file:
+                json.dump(single_file_res, json_file, indent=4, ensure_ascii=False)
+            with open(single_file_consume_time_save_path, 'w', encoding='utf-8') as json_file:
+                json.dump(single_file_time_res, json_file, indent=4, ensure_ascii=False)
 
     res_save_path = res_save_dir + "metric_cal_res_all_files" +".json"
 

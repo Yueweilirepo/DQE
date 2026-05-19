@@ -8,7 +8,7 @@ Anomaly Detection</h1>
 
 This repository contains the implementation of Detection Quality Evaluation (DQE), a novel metric for time series anomaly detection.
 DQE is designed from a detection semantics perspective. It holistically synthesizes anomaly capture quality, near-miss detection quality, and false alarm detection quality, enabling fine-grained evaluation.
-The full methodology is described in our paper, where extensive experiments on both synthetic and real-world data demonstrate that DQE provides reliable, discriminative, robust, interpretable evaluations compared to existing metrics.
+The full methodology is described in our paper, where extensive experiments on both synthetic and real-world data demonstrate that DQE provides interpretable, reliable, discriminative, and robust evaluations compared with existing metrics.
 
 ## Environment
 
@@ -86,8 +86,8 @@ from dqe.dqe_metric import SDQE
 
 # Example data setup
 
-labels = np.array([0, 1, 0, 1, 0])
-detections = np.array([0, 1, 0, 1, 1])
+labels = np.array([0, 1, 0, 0, 0 , 1, 1, 0, 0])
+detections = np.array([0, 0, 1, 0, 0 , 0, 1, 0, 0])
 
 # Compute SDQE
 
@@ -122,7 +122,7 @@ python case_analysis_exp.py --exp_name "anomaly_event_coverage"
 ```
 
 The parameter `exp_name` can be set to one of the following values: 
-["anomaly_event_coverage", "near_miss_proximity", "proximity_inconsistency", "proximity_inconsistency_af", "false_alarm_frequency", "random_case"].
+["anomaly_event_coverage", "near_miss_proximity", "proximity_inconsistency", "proximity_inconsistency_af", "false_alarm_frequency", "random_case", "near_miss_grouping"].
 
 [//]: # (To reproduce the synthetic experiments on effect of point-level coverage bias,)
 
@@ -164,13 +164,15 @@ Execute the Python script `get_evaluation_results.py` for producing evaluation s
 python get_evaluation_results.py
 ```
 
-Execute the Python script `get_mean_result.py` for producing average results at the time-series level by entering the following command:
+Execute the Python script `get_mean_result.py` to obtain the average sequence-level results across all time series for each sub-dataset, along with the corresponding time-efficiency results, using the following command:
 
 ```bash
 python get_mean_result.py
 ```
 
-Execute the Python script `case_analysis.py` for producing results of case studies in paper by entering the following command:
+[//]: # (Execute the Python script `case_analysis.py` for producing results of case studies together with the corresponding component-level results for each anomaly event reported in paper by entering the following command:)
+
+Execute the Python script `case_analysis.py` for producing the case-study results together with the component-level results of each anomaly event reported in the paper, using the following command:
 
 ```bash
 python case_analysis.py --exp_name "UCR case"

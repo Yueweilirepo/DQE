@@ -155,16 +155,16 @@ def randomness_penalty_coefficient(distances, a, b):
     return P
 
 
-def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, near_single_side_range=125,
-                cal_components=False, partition_res=None):
+def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, pred_num=None,
+                   near_single_side_range=125, cal_components=False, partition_res=None):
     """
     Evaluate binary detection results and compute the local DQE score for each anomaly event.
 
-    The function completes the full DQE pipeline:
+    The function completes the full local DQE pipeline at single threshold:
     1. Section partitioning
     2. Local detection-event grouping
     3. Single-threshold DQE-cap, DQE-nm and DQE-fa calculation
-    4. DQE-nm and DQE-fa adjustment
+    4. DQE-nm adjustment
     5. Aggregation of local DQE
 
     Parameters
@@ -211,7 +211,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
         fq_near_e_section_list = partition_res["fq_near_e_section_list"]  # index:0-(n-1)
         fq_near_d_section_list = partition_res["fq_near_d_section_list"]  # index:1-n
 
-        split_line_set = partition_res["split_line_set"]
+        integral_subsection_list = partition_res["integral_subsection_list"]
     else:
         # area list
         fq_dis_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
@@ -219,14 +219,12 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
         fq_near_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
         fq_near_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
 
-        split_line_set = SortedSet()
+        integral_subsection_list = []
 
         for i, tq_section_i in enumerate(tq_section_list):
             # tq_i
             tq_section_i_start, tq_section_i_end = tq_section_i
 
-            # fq_distant_i_mid
-            fq_dis_section_i_mid = None
             if i == 0:
                 if gt_num == 1:
                     # get position
@@ -254,6 +252,13 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
                     # next section
                     # fq_distant_delay_i_next
                     fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
+
+                    # add subsection
+                    integral_subsection_list.append(fq_dis_e_section_list[i])
+                    integral_subsection_list.append(fq_near_e_section_list[i])
+                    integral_subsection_list.append(list(tq_section_i))
+                    integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                    integral_subsection_list.append(fq_dis_d_section_list[i + 1])
                 else:
                     # get position
                     fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
@@ -274,6 +279,12 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
                     # fq_distant
                     # fq_distant_early_i
                     fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+
+                    # add subsection
+                    integral_subsection_list.append(fq_dis_e_section_list[i])
+                    integral_subsection_list.append(fq_near_e_section_list[i])
+                    integral_subsection_list.append(list(tq_section_i))
+                    integral_subsection_list.append(fq_near_d_section_list[i + 1])
             elif i == gt_num - 1:
                 # get position
                 tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
@@ -297,6 +308,14 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
 
                 # next section
                 fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
+
+                # add subsection
+                integral_subsection_list.append(fq_dis_d_section_list[i])
+                integral_subsection_list.append(fq_dis_e_section_list[i])
+                integral_subsection_list.append(fq_near_e_section_list[i])
+                integral_subsection_list.append(list(tq_section_i))
+                integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                integral_subsection_list.append(fq_dis_d_section_list[i + 1])
             else:
                 # get position
                 tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
@@ -319,106 +338,146 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
                 fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
                 fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
 
-            # add split line
-            split_line_set.add(fq_near_e_section_i_start)
-
-            split_line_set.add(tq_section_i_start)
-            split_line_set.add(tq_section_i_end)
-
-            split_line_set.add(fq_near_d_section_i_next_end)
-
-            if i > 0:
-                if fq_dis_section_i_mid != None:
-                    split_line_set.add(fq_dis_section_i_mid)
-
-    # split prediction from segments to events
-    prediction_events = split_intervals(prediction_section_list, split_line_set)
+                integral_subsection_list.append(fq_dis_d_section_list[i])
+                integral_subsection_list.append(fq_dis_e_section_list[i])
+                integral_subsection_list.append(fq_near_e_section_list[i])
+                integral_subsection_list.append(list(tq_section_i))
+                integral_subsection_list.append(fq_near_d_section_list[i + 1])
 
     # detection event group
-    tq_prediction_group_list = [[] for _ in range(gt_num)]
+    # integral section index 0 to N
+    # anomaly section index 0 to N-1
+    # preceding section index 0 to N
+    # after section index 1 to N
+    tq_prediction_group_list = [[] for _ in range(gt_num)]  # 0 to N-1
 
-    fq_near_e_prediction_group_list = [[] for _ in range(gt_num)]
-    fq_near_d_prediction_group_list = [[] for _ in range(gt_num + 1)]
+    fq_near_e_prediction_group_list = [[] for _ in range(gt_num)]  # 0 to N-1
+    fq_near_d_prediction_group_list = [[] for _ in range(gt_num + 1)]  # 1 to N
 
-    precision_prediction_group_list = [[] for _ in range(gt_num)]
+    precision_prediction_group_list = [[] for _ in range(gt_num)]  # 0 to N-1
 
-    fq_dis_e_prediction_group_list = [[] for _ in range(gt_num)]
-    fq_dis_d_prediction_group_list = [[] for _ in range(gt_num + 1)]
+    fq_dis_e_prediction_group_list = [[] for _ in range(gt_num)]  # 0 to N-1
+    fq_dis_d_prediction_group_list = [[] for _ in range(gt_num + 1)]  # 1 to N
 
     # get local prediction event group
-    for i, basic_interval in enumerate(prediction_events):
-        # tq_group
-        for j, area in enumerate(tq_section_list):
-            if pred_in_area(basic_interval, area):
-                tq_prediction_group_list[j].append(basic_interval)
 
-        # fq_near_early_group
-        for j, area in enumerate(fq_near_e_section_list):
-            if pred_in_area(basic_interval, area):
-                fq_near_e_prediction_group_list[j].append(basic_interval)
+    # subsection index(including cap, nm, fa in entire time series)
+    deal_subsection_index_now = 0
+    # basic pred event index
+    deal_pred_basic_index_now = 0
+    # cut pred event index
+    deal_cut_pred_basic_index_now = 0
+    subsection_len = len(integral_subsection_list)
+    cut_pred_basic_list = []
 
-        # fq_near_delay_group
-        for j, area in enumerate(fq_near_d_section_list):
-            if pred_in_area(basic_interval, area):
-                fq_near_d_prediction_group_list[j].append(basic_interval)
+    subsection_list_list = [fq_dis_e_prediction_group_list,
+                            fq_near_e_prediction_group_list,
+                            tq_prediction_group_list,
+                            fq_near_d_prediction_group_list,
+                            fq_dis_d_prediction_group_list,
+                            ]
 
-            # precision_group
-            if j >= 1:
-                area_id_last = j - 1
-                precision_prediction_group_list[j - 1] = fq_near_e_prediction_group_list[area_id_last] + \
-                                                         tq_prediction_group_list[area_id_last] + \
-                                                         fq_near_d_prediction_group_list[j]
-        # fq_distant_group
-        for j, area in enumerate(fq_dis_e_section_list):
-            if pred_in_area(basic_interval, area):
-                fq_dis_e_prediction_group_list[j].append(basic_interval)
+    if not pred_num:
+        pred_num = len(prediction_section_list)
+    prediction_section_list = [list(x) for x in prediction_section_list]
+    if pred_num > 0:
+        cut_pred_basic_list.append(prediction_section_list[0])
+        while deal_subsection_index_now < subsection_len \
+                and deal_pred_basic_index_now < pred_num:
+            # deal next subsection
+            subsection = integral_subsection_list[deal_subsection_index_now]
 
-        for j, area in enumerate(fq_dis_d_section_list):
-            if pred_in_area(basic_interval, area):
-                fq_dis_d_prediction_group_list[j].append(basic_interval)
+            while True:
+                # deal next cut_pred_basic_interval
+                cut_pred_basic_interval = cut_pred_basic_list[deal_cut_pred_basic_index_now]
 
-    # deal the mid one
-    for i in range(gt_num):
-        if i >= 1 and i <= gt_num:
-            if fq_dis_d_prediction_group_list[i] != [] and fq_dis_e_prediction_group_list[i] != []:
-                f_dis_d_last_pred = fq_dis_d_prediction_group_list[i][-1]
-                f_dis_e_first_pred = fq_dis_e_prediction_group_list[i][0]
-                f_dis_d_last_pred_len = f_dis_d_last_pred[1] - f_dis_d_last_pred[0]
-                f_dis_e_first_pred_len = f_dis_e_first_pred[1] - f_dis_e_first_pred[0]
-                if f_dis_d_last_pred_len >= f_dis_e_first_pred_len:
-                    fq_dis_d_prediction_group_list[i][-1] = [f_dis_d_last_pred[0], f_dis_e_first_pred[1]]
-                    fq_dis_e_prediction_group_list[i].pop(0)
+                if pred_in_area(cut_pred_basic_interval, subsection):
+                    # deal all pred events in subsection
+                    #  a    [      ]
+                    #  p     [] []
+
+                    now_pred_group_index = deal_subsection_index_now % 5
+                    now_integral_index = deal_subsection_index_now // 5
+                    if now_pred_group_index >= 3:
+                        now_integral_index += 1
+
+                    # add to corresponding evnet group
+                    subsection_list_list[now_pred_group_index][now_integral_index].append(cut_pred_basic_interval)
+
+                    # deal next basic_pred
+                    # basic_pred_index + 1
+                    deal_pred_basic_index_now += 1
+
+                    # cut_pred_basic_index + 1
+                    deal_cut_pred_basic_index_now += 1
+
+                    # deal the last basic_pred
+                    if deal_pred_basic_index_now >= pred_num:
+                        break
+
+                    cut_pred_basic_list.append(prediction_section_list[deal_pred_basic_index_now])
+                elif cut_pred_basic_interval[0] >= subsection[1]:
+                    # after anomaly event, deal next
+                    #  a    [  ]
+                    #  p         []
+                    # subsection_index + 1, prepare next subsection
+                    deal_subsection_index_now += 1
+                    break
                 else:
-                    fq_dis_d_prediction_group_list[i].pop()
-                    fq_dis_e_prediction_group_list[i][0] = [f_dis_d_last_pred[0], f_dis_e_first_pred[1]]
+                    # intersection case
+                    #  a  [  ]
+                    #  p   [   ]
+                    new_cut_interval_now = [cut_pred_basic_interval[0], subsection[1]]
 
-    mp_fq_near_list = [[] for _ in range(gt_num)]
+                    new_cut_interval_left = [subsection[1], cut_pred_basic_interval[1]]
+
+                    # replace to cut section
+                    cut_pred_basic_list.pop()
+                    cut_pred_basic_list.append(new_cut_interval_now)  # this is after deal
+                    cut_pred_basic_list.append(new_cut_interval_left)
+
+                    # cut and add
+                    now_pred_group_index = deal_subsection_index_now % 5
+                    now_integral_index = deal_subsection_index_now // 5
+                    if now_pred_group_index >= 3:
+                        now_integral_index += 1
+                    subsection_list_list[now_pred_group_index][now_integral_index].append(new_cut_interval_now)
+
+                    # subsection index + 1, prepare next subsection
+                    deal_subsection_index_now += 1
+                    # cut pred basic index + 1
+                    deal_cut_pred_basic_index_now += 1
+                    break
+
+    # near-miss score
+
     co_fq_near_list = [[] for _ in range(gt_num)]
     td_fq_near_list = [[] for _ in range(gt_num)]
-    fq_near_score_list = np.arange(gt_num, dtype=np.float64)
 
-    # cal score function,tq_near score
+    # false alarm score
+
+    td_fq_dis_e_list = np.arange(gt_num + 1, dtype=np.float64)
+
+    td_fq_dis_d_list = np.arange(gt_num + 1, dtype=np.float64)
+
+    # dqe
+    local_tqe_list = np.arange(gt_num, dtype=np.float64)
+
+    local_cap_list = np.arange(gt_num, dtype=np.float64)
+    local_near_detection_list = np.arange(gt_num, dtype=np.float64)
+    local_false_alarm_list = np.arange(gt_num, dtype=np.float64)
+
+    # cal local score
     for i, area in enumerate(tq_section_list):
         area_id_next = i + 1
+
+        # cal nm score
         # fq_near_early
 
         fq_near_e_area = fq_near_e_section_list[i]
-
         fq_near_e_end = fq_near_e_area[1]
 
         fq_near_e_pred_group = fq_near_e_prediction_group_list[i]
-
-        fq_near_e_num = len(fq_near_e_pred_group)
-        for interval_idx, basic_interval in enumerate(fq_near_e_pred_group):
-            single_duration = basic_interval[1] - basic_interval[0]
-            td_fq_near_list[i].append(single_duration)
-
-            single_p = abs(fq_near_e_end - (basic_interval[1] + basic_interval[0]) / 2)
-            mp_fq_near_list[i].append(single_p)
-
-            if interval_idx == fq_near_e_num - 1:
-                single_r = abs(fq_near_e_end - basic_interval[1])
-                co_fq_near_list[i].append(single_r)
 
         # fq_near_delay
         fq_near_d_area = fq_near_d_section_list[area_id_next]
@@ -426,68 +485,55 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
 
         fq_near_d_pred_group = fq_near_d_prediction_group_list[area_id_next]
 
-        for interval_idx, basic_interval in enumerate(fq_near_d_pred_group):
-            single_duration = basic_interval[1] - basic_interval[0]
-            td_fq_near_list[i].append(single_duration)
+        if fq_near_e_pred_group == [] and fq_near_d_pred_group == []:
+            score_fq_near = 0
+        else:
+            fq_near_e_num = len(fq_near_e_pred_group)
+            for interval_idx, basic_interval in enumerate(fq_near_e_pred_group):
+                single_duration = basic_interval[1] - basic_interval[0]
+                td_fq_near_list[i].append(single_duration)
 
-            single_p = abs((basic_interval[1] + basic_interval[0]) / 2 - fq_near_d_start)
-            mp_fq_near_list[i].append(single_p)
+                if interval_idx == fq_near_e_num - 1:
+                    single_r = abs(fq_near_e_end - basic_interval[1])
+                    co_fq_near_list[i].append(single_r)
 
-            if interval_idx == 0:
-                single_r = abs(fq_near_d_start - basic_interval[0])
-                co_fq_near_list[i].append(single_r)
+            for interval_idx, basic_interval in enumerate(fq_near_d_pred_group):
+                single_duration = basic_interval[1] - basic_interval[0]
+                td_fq_near_list[i].append(single_duration)
 
-        mp_fq_near = np.mean(np.array(mp_fq_near_list[i])) if len(mp_fq_near_list[i]) > 0 else 0
-        co_fq_near = np.min(np.array(co_fq_near_list[i])) if len(co_fq_near_list[i]) > 0 else 0
-        td_fq_near = np.sum(np.array(td_fq_near_list[i])) if len(td_fq_near_list[i]) > 0 else 0
+                if interval_idx == 0:
+                    single_r = abs(fq_near_d_start - basic_interval[0])
+                    co_fq_near_list[i].append(single_r)
 
-        score_fq_near_mp = ddl_func(mp_fq_near, near_single_side_range,
-                                    gama=1) if near_single_side_range != 0 else 1
-        score_fq_near_co = ddl_func(co_fq_near, near_single_side_range,
-                                    gama=1) if near_single_side_range != 0 else 1
-        score_fq_near_td = ddl_func(td_fq_near, 2 * near_single_side_range,
-                                    gama=1) if near_single_side_range != 0 else 1
+            co_fq_near = np.min(np.array(co_fq_near_list[i])) if len(co_fq_near_list[i]) > 0 else 0
+            td_fq_near = np.sum(np.array(td_fq_near_list[i])) if len(td_fq_near_list[i]) > 0 else 0
 
-        score_fq_near = score_fq_near_mp * \
-                        score_fq_near_co * \
-                        score_fq_near_td
+            score_fq_near_co = ddl_func(co_fq_near, near_single_side_range,
+                                        gama=1) if near_single_side_range != 0 else 1
+            score_fq_near_td = ddl_func(td_fq_near, 2 * near_single_side_range,
+                                        gama=1) if near_single_side_range != 0 else 1
 
-        fq_near_score_list[i] = score_fq_near
 
-    # adjust near-miss score
-    adjust_score_fq_near_list = deepcopy(fq_near_score_list)
+            score_fq_near = score_fq_near_co \
+                            * score_fq_near_td
 
-    for i in range(gt_num):
-        area_id_next = i + 1
+        # adjust nm
         fq_near_prediction_group_now = fq_near_e_prediction_group_list[i] + fq_near_d_prediction_group_list[
             area_id_next]
         fq_dis_prediction_group_now = fq_dis_e_prediction_group_list[i] + fq_dis_d_prediction_group_list[area_id_next]
 
-        if fq_near_prediction_group_now == [] \
-                and (tq_prediction_group_list[i] == [] or \
-                     (tq_prediction_group_list[i] != [] and \
-                      fq_dis_prediction_group_now != [])):
-            adjust_score_fq_near_list[i] = 0
+        if tq_prediction_group_list[i] != [] \
+                and fq_near_prediction_group_now == [] \
+                and fq_dis_prediction_group_now == []:
+            score_fq_near = 1
 
-    # false alarm score
-    score_fq_dis_list = np.arange(gt_num, dtype=np.float64)
+        # cal fa
+        fq_dis_e_section = fq_dis_e_section_list[i]
+        fq_dis_d_next_section = fq_dis_d_section_list[area_id_next]
 
-    adjust_score_fq_dis_list = np.arange(gt_num, dtype=np.float64)
+        fq_dis_e_end = fq_dis_e_section[1]
 
-    td_fq_dis_e_list = np.arange(gt_num + 1, dtype=np.float64)
-
-    td_fq_dis_d_list = np.arange(gt_num + 1, dtype=np.float64)
-
-    p_direction_dis_all_list = [[] for _ in range(gt_num)]
-
-    for i, area in enumerate(tq_section_list):
-        area_id_next = i + 1
-
-        fq_dis_e_area = fq_dis_e_section_list[i]
-        fq_dis_e_end = fq_dis_e_area[1]
-
-        fq_dis_d_area = fq_dis_d_section_list[area_id_next]
-        fq_dis_d_start = fq_dis_d_area[0]
+        fq_dis_d_start = fq_dis_d_next_section[0]
 
         fq_dis_e_pred_group = fq_dis_e_prediction_group_list[i]
         fq_dis_d_next_pred_group = fq_dis_d_prediction_group_list[area_id_next]
@@ -513,13 +559,6 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
 
         td_fq_dis_d_list[area_id_next] = td_fq_dis_d_sum
 
-        p_direction_dis_all_list[i] = p_direction_dis_list
-
-    for i in range(gt_num):
-        area_id_next = i + 1
-
-        fq_dis_e_section = fq_dis_e_section_list[i]
-        fq_dis_d_next_section = fq_dis_d_section_list[area_id_next]
         if fq_dis_e_section[0] <= fq_dis_e_section[1]:
             fq_dis_e_section_len = fq_dis_e_section[1] - fq_dis_e_section[0]
         else:
@@ -529,13 +568,8 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
         else:
             fq_dis_d_next_section_len = 0
 
-        p_direction_dis_list_now = p_direction_dis_all_list[i]
-
-        randomness_penalty_score = randomness_penalty_coefficient(p_direction_dis_list_now, fq_dis_e_section_len,
+        randomness_penalty_score = randomness_penalty_coefficient(p_direction_dis_list, fq_dis_e_section_len,
                                                                   fq_dis_d_next_section_len)
-
-        fq_dis_e_pred_group = fq_dis_e_prediction_group_list[i]
-        fq_dis_d_next_pred_group = fq_dis_d_prediction_group_list[area_id_next]
 
         fq_dis_pred_group_td_around = td_fq_dis_e_list[i] + td_fq_dis_d_list[i + 1]
 
@@ -544,64 +578,33 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
 
         false_alarm_score = false_alarm_func_liner(fq_dis_pred_group_td_around,
                                                    dis_section_scaled) if dis_section_len != 0 else 1
+
         score_fq_dis_td = randomness_penalty_score * false_alarm_score
 
-        score_fq_dis_list[i] = score_fq_dis_td
-
-        # adjust false alarm
-        if fq_dis_e_pred_group == [] \
-                and fq_dis_d_next_pred_group == [] \
-                and fq_near_e_prediction_group_list[i] == [] \
-                and tq_prediction_group_list[i] == [] \
-                and fq_near_d_prediction_group_list[area_id_next] == []:
-            adjust_score_fq_dis_list[i] = 0
-        else:
-            adjust_score_fq_dis_list[i] = score_fq_dis_list[i]
-
-    # integrate
-
-    local_tqe_list = np.arange(gt_num, dtype=np.float64)
-
-    local_cap_list = np.arange(gt_num, dtype=np.float64)
-    local_near_detection_list = np.arange(gt_num, dtype=np.float64)
-    local_false_alarm_list = np.arange(gt_num, dtype=np.float64)
-
-    gt_detected_num = 0
-
-    # 7th circle
-    for i in range(gt_num):
+        # cal dqe
         precision_tq_pred_group = tq_prediction_group_list[i]
 
         pred_group_integral_recall_tq = 0
 
-        if precision_tq_pred_group != []:
-            gt_detected_num += 1
         for j, basic_interval in enumerate(precision_tq_pred_group):
             if basic_interval != []:
                 cal_integral_basic_interval_gt_recall = (basic_interval[1] - basic_interval[0])
                 pred_group_integral_recall_tq += cal_integral_basic_interval_gt_recall
-
 
         if pred_group_integral_recall_tq > 0:
             detected_score = 1
         else:
             detected_score = 0
 
-        tq_recall = detected_score
 
-        adjust_score_fq_near = adjust_score_fq_near_list[i]
-
-        adjust_score_fq_dis = adjust_score_fq_dis_list[i]
-
-        local_tqe = cal_local_dqe(tq_recall, adjust_score_fq_near, adjust_score_fq_dis)
+        local_tqe = cal_local_dqe(detected_score, score_fq_near, score_fq_dis_td)
 
         local_tqe_list[i] = local_tqe
 
         if cal_components:
-            local_cap_list[i] = tq_recall
-
-            local_near_detection_list[i] = adjust_score_fq_near
-            local_false_alarm_list[i] = adjust_score_fq_dis
+            local_cap_list[i] = detected_score
+            local_near_detection_list[i] = score_fq_near
+            local_false_alarm_list[i] = score_fq_dis_td
 
     if cal_components:
         return {
@@ -617,9 +620,9 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, n
         }
 
 
-def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=False):
+def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=False, per_anomaly_res=False):
     """
-    Evaluate binary detection results and compute the final single-threshold DQE score.
+    Evaluate binary detection results and compute the final single-threshold SDQE score.
 
     Parameters
     ----------
@@ -631,59 +634,93 @@ def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=Fa
         Half-width of the temporal window used to define near-miss regions;
         detections within this window are treated as relevant near-misses.
     cal_components : bool
-        If True, also return the three DQE component scores (DQE-cap, DQE-nm, DQE-fa);
-        otherwise return only the aggregated single-threshold DQE.
+        If True, also return the three SDQE component scores (SDQE-cap, SDQE-nm, SDQE-fa);
+        otherwise return only the aggregated single-threshold SDQE.
+    per_anomaly_res : bool
+        If True, also return the three SDQE component scores of each anomaly (S-cap, S-nm, S-fa);
 
     Returns
     -------
     dqe_res_ts : dict
             dqe : float
-                Final threshold-free DQE score.
+                Final SDQE score.
             dqe_cap : float, optional
-                DQE-cap (returned only when cal_components=True).
+                SDQE-cap (returned only when cal_components=True).
             dqe_near_miss : float, optional
-                DQE-nm (returned only when cal_components=True).
+                SDQE-nm (returned only when cal_components=True).
             dqe_false_alarm : float, optional
-                DQE-fa (returned only when cal_components=True).
+                SDQE-fa (returned only when cal_components=True).
+            per_anomaly_res : dict, optional
+                returned only when per_anomaly_res=True.
     """
-
 
     ts_len = len(y_true)
     gt_interval_ranges = convert_vector_to_events_dqe(y_true)
     gt_num = len(gt_interval_ranges)
 
     pred_interval_ranges = convert_vector_to_events_dqe(binary_predicted)
+    pred_num = len(pred_interval_ranges)
     dqe_local_list_res_ts_single_thresh = DQE_section(gt_interval_ranges,
-                                                      pred_interval_ranges,
-                                                      ts_len,
-                                                      gt_num,
-                                                      near_single_side_range=near_single_side_range,
-                                                      cal_components=cal_components)
+                                                         pred_interval_ranges,
+                                                         ts_len,
+                                                         gt_num,
+                                                         pred_num,
+                                                         near_single_side_range=near_single_side_range,
+                                                         cal_components=cal_components,
+                                                         )
 
-    dqe_single = np.array(dqe_local_list_res_ts_single_thresh["seq_dqe_local_list"]).mean()
+    dqe_local_single_thresh_array = dqe_local_list_res_ts_single_thresh["seq_dqe_local_list"]
+    dqe_single = np.array(dqe_local_single_thresh_array).mean()
 
     if cal_components:
-        dqe_cap_single = np.array(dqe_local_list_res_ts_single_thresh["seq_cap_local_list"]).mean()
-        dqe_near_miss_single = np.array(dqe_local_list_res_ts_single_thresh["seq_near_miss_local_list"]).mean()
-        dqe_false_alarm_single = np.array(dqe_local_list_res_ts_single_thresh["seq_false_alarm_local_list"]).mean()
+        dqe_cap_local_single_thresh_array = dqe_local_list_res_ts_single_thresh["seq_cap_local_list"]
+        dqe_cap_single = np.array(dqe_cap_local_single_thresh_array).mean()
+        dqe_near_miss_single_thresh_array = dqe_local_list_res_ts_single_thresh["seq_near_miss_local_list"]
+        dqe_near_miss_single = np.array(dqe_near_miss_single_thresh_array).mean()
+        dqe_false_alarm_single_thresh_array = dqe_local_list_res_ts_single_thresh["seq_false_alarm_local_list"]
+        dqe_false_alarm_single = np.array(dqe_false_alarm_single_thresh_array).mean()
 
     if cal_components:
         # dqe in single ts
-        dqe_res_ts = {
-            "dqe": dqe_single,
+        if per_anomaly_res:
+            dqe_res_ts = {
+                "sdqe": dqe_single,
 
-            "dqe_cap": dqe_cap_single,
-            "dqe_near_miss": dqe_near_miss_single,
-            "dqe_false_alarm": dqe_false_alarm_single,
-        }
+                "sdqe_cap": dqe_cap_single,
+                "sdqe_near_miss": dqe_near_miss_single,
+                "sdqe_false_alarm": dqe_false_alarm_single,
+                "per_anomaly_res": {
+                    "sdqe_local": dqe_local_single_thresh_array.tolist(),
+                    "sdqe_cap_local": dqe_cap_local_single_thresh_array.tolist(),
+                    "sdqe_near_miss_local": dqe_near_miss_single_thresh_array.tolist(),
+                    "sdqe_false_alarm_local": dqe_false_alarm_single_thresh_array.tolist()
+                },
+
+            }
+        else:
+            dqe_res_ts = {
+                "sdqe": dqe_single,
+
+                "sdqe_cap": dqe_cap_single,
+                "sdqe_near_miss": dqe_near_miss_single,
+                "sdqe_false_alarm": dqe_false_alarm_single,
+            }
     else:
-        dqe_res_ts = {
-            "dqe": dqe_single,
-        }
+        if per_anomaly_res:
+            dqe_res_ts = {
+                "sdqe": dqe_single,
+                "per_anomaly_res": {"sdqe_local": dqe_local_single_thresh_array.tolist(),
+                                    },
+            }
+        else:
+            dqe_res_ts = {
+                "sdqe": dqe_single,
+            }
     return dqe_res_ts
 
 
-def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_components=False, cal_multi_ts=False):
+def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_components=False, cal_multi_ts=False,
+        per_anomaly_res=False):
     """
     Evaluate detection quality evaluation score in a threshold-free manner.
 
@@ -708,6 +745,11 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
     cal_components : bool
         If True, also return the three DQE component scores (DQE-cap, DQE-nm, DQE-fa);
         otherwise return only the aggregated DQE.
+    cal_multi_ts : bool
+        If True, return the result of anomaly-event level evaluation;
+        otherwise return the result of sequence level evaluation.
+    per_anomaly_res : bool
+        If True, also return the three DQE component scores of each anomaly (DQE-local-cap, DQE-local-nm, DQE-local-fa);
 
     Returns
     -------
@@ -720,6 +762,8 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
             DQE-nm (returned only when cal_components=True).
         dqe_false_alarm : float, optional
             DQE-fa (returned only when cal_components=True).
+        per_anomaly_res : dict, optional
+            returned only when per_anomaly_res=True.
     """
 
     ts_len = len(y_true)
@@ -742,21 +786,20 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
         binary_predicted = (y_score >= threshold).astype(int)
         pred_interval_ranges = convert_vector_to_events_dqe(binary_predicted)
 
+        pred_num = len(pred_interval_ranges)
+
         # area list
-        fq_dis_section_list = [[] for _ in range(gt_num + 1)]  # index:0-n
         fq_dis_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
         fq_dis_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
         fq_near_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
         fq_near_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
 
-        split_line_set = SortedSet()
+        integral_subsection_list = []
         tq_section_list = gt_interval_ranges
         for i, tq_section_i in enumerate(tq_section_list):
             # tq_i
             tq_section_i_start, tq_section_i_end = tq_section_i
 
-            # fq_distant_i_mid
-            fq_dis_section_i_mid = None
             if i == 0:
                 if gt_num == 1:
                     # get position
@@ -772,7 +815,6 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
                     # fq_near_early_i
                     fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
 
-
                     # next section
                     # fq_near_delay_i_next
                     fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start,
@@ -785,6 +827,13 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
                     # next section
                     # fq_distant_delay_i_next
                     fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
+
+                    # add subsection
+                    integral_subsection_list.append(fq_dis_e_section_list[i])
+                    integral_subsection_list.append(fq_near_e_section_list[i])
+                    integral_subsection_list.append(list(tq_section_i))
+                    integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                    integral_subsection_list.append(fq_dis_d_section_list[i + 1])
                 else:
                     # get position
                     fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
@@ -805,6 +854,12 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
                     # fq_distant
                     # fq_distant_early_i
                     fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+
+                    # add subsection
+                    integral_subsection_list.append(fq_dis_e_section_list[i])
+                    integral_subsection_list.append(fq_near_e_section_list[i])
+                    integral_subsection_list.append(list(tq_section_i))
+                    integral_subsection_list.append(fq_near_d_section_list[i + 1])
             elif i == gt_num - 1:
                 # get position
                 tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
@@ -828,6 +883,14 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
 
                 # next section
                 fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
+
+                # add subsection
+                integral_subsection_list.append(fq_dis_d_section_list[i])
+                integral_subsection_list.append(fq_dis_e_section_list[i])
+                integral_subsection_list.append(fq_near_e_section_list[i])
+                integral_subsection_list.append(list(tq_section_i))
+                integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                integral_subsection_list.append(fq_dis_d_section_list[i + 1])
             else:
                 # get position
                 tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
@@ -850,37 +913,33 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
                 fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
                 fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
 
-            # add split line
-            split_line_set.add(fq_near_e_section_i_start)
+                integral_subsection_list.append(fq_dis_d_section_list[i])
+                integral_subsection_list.append(fq_dis_e_section_list[i])
+                integral_subsection_list.append(fq_near_e_section_list[i])
+                integral_subsection_list.append(list(tq_section_i))
+                integral_subsection_list.append(fq_near_d_section_list[i + 1])
 
-            split_line_set.add(tq_section_i_start)
-            split_line_set.add(tq_section_i_end)
-
-            split_line_set.add(fq_near_d_section_i_next_end)
-
-            if i > 0:
-                if fq_dis_section_i_mid != None:
-                    split_line_set.add(fq_dis_section_i_mid)
 
         partition_res = {
-            "fq_dis_section_list": fq_dis_section_list,
             "fq_dis_e_section_list": fq_dis_e_section_list,
             "fq_dis_d_section_list": fq_dis_d_section_list,
             "fq_near_e_section_list": fq_near_e_section_list,
             "fq_near_d_section_list": fq_near_d_section_list,
 
-            "split_line_set": split_line_set
+            "integral_subsection_list": integral_subsection_list
         }
 
         # add single thresh
+
         dqe_local_list_res_ts_single_thresh = DQE_section(gt_interval_ranges,
-                                                          pred_interval_ranges,
-                                                          ts_len,
-                                                          gt_num,
-                                                          near_single_side_range=near_single_side_range,
-                                                          cal_components=cal_components,
-                                                          partition_res=partition_res,
-                                                          )
+                                                             pred_interval_ranges,
+                                                             ts_len,
+                                                             gt_num,
+                                                             pred_num,
+                                                             near_single_side_range=near_single_side_range,
+                                                             cal_components=cal_components,
+                                                             partition_res=partition_res,
+                                                             )
 
         dqe_matrix.append(dqe_local_list_res_ts_single_thresh["seq_dqe_local_list"])
         if cal_components:
@@ -906,7 +965,6 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
         # weight sum
         # v_h
         dqe_matrix_v = np.array(dqe_matrix).mean(axis=0)
-
         if cal_components:
             dqe_cap_v = np.array(dqe_matrix_cap).mean(axis=0)
             dqe_near_miss_v = np.array(dqe_matrix_near_miss).mean(axis=0)
@@ -921,19 +979,42 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
 
         if cal_components:
             # dqe in single ts
-            dqe_res_ts = {
-                "dqe": dqe,
+            if per_anomaly_res:
+                dqe_res_ts = {
+                    "dqe": dqe,
 
-                "dqe_cap": dqe_cap,
-                "dqe_near_miss": dqe_near_miss,
-                "dqe_false_alarm": dqe_false_alarm,
-            }
+                    "dqe_cap": dqe_cap,
+                    "dqe_near_miss": dqe_near_miss,
+                    "dqe_false_alarm": dqe_false_alarm,
+                    "per_anomaly_res": {"dqe_local": dqe_matrix_v.tolist(),
+                                        "dqe_cap_local": dqe_cap_v.tolist(),
+                                        "dqe_near_miss_local": dqe_near_miss_v.tolist(),
+                                        "dqe_false_alarm_local": dqe_false_alarm_v.tolist()
+                                        },
+
+                }
+            else:
+
+                dqe_res_ts = {
+                    "dqe": dqe,
+
+                    "dqe_cap": dqe_cap,
+                    "dqe_near_miss": dqe_near_miss,
+                    "dqe_false_alarm": dqe_false_alarm,
+                }
         else:
-            dqe_res_ts = {
-                "dqe": dqe,
-            }
-        return dqe_res_ts
+            if per_anomaly_res:
+                dqe_res_ts = {
+                    "dqe": dqe,
+                    "per_anomaly_res": {"dqe_local": dqe_matrix_v.tolist(),
+                                        },
+                }
+            else:
 
+                dqe_res_ts = {
+                    "dqe": dqe,
+                }
+        return dqe_res_ts
 
 def cal_dqe_matrix(ts_dict: dict, output_dict: dict, gt_dict: dict, thresh_num=100, cal_components=False,
                    method_name=None, single_slidingWindow=None):
@@ -950,15 +1031,16 @@ def cal_dqe_matrix(ts_dict: dict, output_dict: dict, gt_dict: dict, thresh_num=1
         single_gt = np.array(gt_dict[ts_file_name])
         single_output = np.array(output_dict[ts_file_name])
 
-        # if calculated, pass here
-        if single_slidingWindow == None:
-            single_slidingWindow = find_length_rank(single_ts, rank=1)
+        single_slidingWindow = find_length_rank(single_ts, rank=1)
 
-        dqe_matrix_res = DQE(single_gt, single_output,
+
+
+        dqe_matrix_res = DQE(single_gt,
+                             single_output,
                              near_single_side_range=single_slidingWindow / 2,
                              cal_multi_ts=True,
-                             cal_components=True,
                              thresh_num=thresh_num)
+
         dqe_matrix = np.array(dqe_matrix_res["dqe_matrix"])
 
         if cal_components:

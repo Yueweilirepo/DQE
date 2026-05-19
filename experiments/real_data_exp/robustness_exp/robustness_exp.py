@@ -173,7 +173,7 @@ dict_acc_global = {
             "dqe": [],
         }
 
-methods_keys_global = ['SR', 'CNN', 'Sub_LOF', 'FFT', 'KMeansAD_U', 'Sub_KNN', 'TimesNet']
+methods_keys_global = ['CNN', 'Sub_LOF', 'FFT', 'KMeansAD_U', 'TimesNet']
 
 
 def compute_anomaly_acc_lag(methods_scores, label, slidingWindow, methods_keys, dataset_name, file_name):
@@ -379,7 +379,7 @@ def multi_run_wrapper(args):
 def main():
     dataset_name_list = [
         'WSD',
-        'YAHOO',
+        # 'YAHOO',
         'UCR'
     ]
 

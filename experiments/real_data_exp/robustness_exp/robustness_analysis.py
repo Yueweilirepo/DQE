@@ -105,7 +105,7 @@ measures_name = {
     "PA-K",
     "RF",
     "eTaF",
-     "AF",
+    "AF",
     "PATE",
     "AUC-ROC",
     "AUC-PR",
@@ -177,7 +177,7 @@ desired_order = [
 if plot_single_dataset_single_robust:
     fontsize = 50
     fontsize_tick = 50
-    plt.figure(figsize=(40, 15))
+    plt.figure(figsize=(41, 15))
 
     measures = ['lag', 'noise', 'percentage']
 
@@ -220,7 +220,7 @@ if plot_single_dataset_single_robust:
 
 if plot_all_dataset_single_robust:
     plt.rcParams.update({'font.size': 50})
-    plt.figure(figsize=(40, 10.5))
+    plt.figure(figsize=(41, 10.5))
     plt.subplot(1, 3, 1)
     plt.title('Averaged Lag sensitivity')
 

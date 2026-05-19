@@ -3,6 +3,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import numpy as np
+import pandas as pd
 import copy
 
 
@@ -13,7 +14,7 @@ file_path = res_dir + "methods_pred_res/"
 ori_data_path = dataset_dir + "TSB-AD-U/"
 res_save_dir = res_dir + "metric_cal_res_windows/"
 
-dataset_methods_name_list = ['SR', 'KMeansAD_U', 'Sub_KNN', 'TimesNet', 'CNN', 'Sub_LOF', 'FFT']
+dataset_methods_name_list = ['KMeansAD_U', 'TimesNet', 'CNN', 'Sub_LOF', 'FFT']
 
 file_path_dict = {}
 dataset_methods_file_list = os.listdir(file_path)
@@ -28,7 +29,7 @@ data_set_choose_file_list = []
 
 dataset_name_list = [
     'WSD',
-    'YAHOO',
+    # 'YAHOO',
     'UCR',
 ]
 choose_method_num = str(len(dataset_methods_name_list))
@@ -44,7 +45,7 @@ print(method_name_index_dict)
 
 # integral every dataset
 dataset_name_score_list_dict = {
-    'YAHOO': {},
+    # 'YAHOO': {},
     'WSD': {},
     'UCR': {},
 }
@@ -70,6 +71,34 @@ for id_dataset_name, dataset_name in enumerate(file_method_metric_dict.keys()):
     dataset_count_dict[dataset_name_to_find] +=1
 
 print("dataset_count_dict",dataset_count_dict)
+
+
+# cal len
+ori_data_dir = dataset_dir + "TSB-AD-U/"
+
+dataset_len_array_dict = {"ALL":[]}
+for id_dataset_name, dataset_file_name in enumerate(file_method_metric_dict.keys()):
+    dataset_name_to_find = dataset_file_name.split("_")[1]
+    if dataset_name_to_find not in dataset_name_list:
+        continue
+    if dataset_name_to_find not in dataset_len_array_dict:
+        dataset_len_array_dict[dataset_name_to_find] =[]
+
+    csv_file_name = dataset_file_name.split(".")[0].replace("_method_pred_scaled", "") + ".csv"
+
+    ori_data_file_path = ori_data_dir + csv_file_name
+    df = pd.read_csv(ori_data_file_path).dropna()
+
+    data_len = df['Data'].size
+
+    dataset_len_array_dict[dataset_name_to_find] += [data_len]
+    dataset_len_array_dict["ALL"] += [data_len]
+
+
+for id_dataset_name, dataset_name in enumerate(dataset_len_array_dict.keys()):
+    dataset_len_array_dict[dataset_name] = np.array(dataset_len_array_dict[dataset_name])
+
+print("dataset_len_list_dict", dataset_len_array_dict)
 
 metric_name_list = [
     'Standard-F1',
@@ -173,6 +202,50 @@ for id_dateset_name, (dateset_name, dateset_score_dict) in enumerate(dataset_nam
             dataset_name_score_list_dict[dateset_name][metric_name][method_name]["min_score"] = float(min_score)
             dataset_name_score_list_dict[dateset_name][metric_name][method_name]["median_score"] = float(median_score)
             dataset_name_score_list_dict[dateset_name][metric_name][method_name]["score_range"] = float(max_score - min_score)
+
+
+# create res structure
+dataset_name_all_method_time_list_dict =  copy.deepcopy(dataset_name_score_list_dict)
+dataset_name_all_method_time_list_dict["ALL"] = {}
+for id_dateset_name, (dateset_name, dateset_score_dict) in enumerate(dataset_name_score_list_dict.items()):
+    for id_metric_name, (metric_name,metric_score_dict) in enumerate(dateset_score_dict.items()):
+        dataset_name_all_method_time_list_dict[dateset_name][metric_name]["all_method_time_list"] = []
+        dataset_name_all_method_time_list_dict[dateset_name][metric_name]["all_method_time_mean"] = None
+
+        if id_dateset_name == 0:
+            dataset_name_all_method_time_list_dict["ALL"][metric_name] = {"all_method_time_list": [], "all_method_time_mean": None}
+
+
+for id_dateset_name, (dateset_name, dateset_score_dict) in enumerate(dataset_name_score_list_dict.items()):
+    for id_metric_name, (metric_name,metric_score_dict) in enumerate(dateset_score_dict.items()):
+        for id_method_name, (method_name,method_score_info_dict) in enumerate(metric_score_dict.items()):
+
+            score_list = dataset_name_score_list_dict[dateset_name][metric_name][method_name]["score_list"]
+
+            dataset_name_all_method_time_list_dict[dateset_name][metric_name]["all_method_time_list"] += score_list
+            dataset_name_all_method_time_list_dict["ALL"][metric_name]["all_method_time_list"] += score_list
+
+# cal time res
+res_data = {}
+for id_dateset_name, (dateset_name, dateset_score_dict) in enumerate(dataset_name_all_method_time_list_dict.items()):
+    print()
+    print("dateset_name", dateset_name)
+
+    data_set_mean_len = np.mean(dataset_len_array_dict[dateset_name])
+    print(" mean len", data_set_mean_len)
+    print()
+
+    res_data[dateset_name] = {}
+
+    for id_metric_name, (metric_name,metric_score_dict) in enumerate(dateset_score_dict.items()):
+
+        score_list = dataset_name_all_method_time_list_dict[dateset_name][metric_name]["all_method_time_list"]
+
+        mean_score = np.array(score_list).mean()
+
+        mean_score_round = np.round(mean_score, 4)
+        res_data[dateset_name][metric_name] = mean_score_round
+        print(" "+metric_name, mean_score_round)
 
 
 # cal mean score for all datasets

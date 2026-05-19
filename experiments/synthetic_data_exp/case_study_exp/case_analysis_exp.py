@@ -69,8 +69,25 @@ if __name__ == '__main__':
         "dqe": "DQE",
     }
 
+    # anomaly event coverage
+    if args.exp_name == "anomaly_event_coverage":
+        json_file_name = "anomaly_event_coverage"
 
-    choose_metric_name_order_list = [
+        anomaly_num = 5
+        anomaly_point_len = 40
+        anomaly_ratio = 0.1
+
+        window_length = 2050
+        label_ranges = [
+            [[322, 361], [663, 702], [1004, 1043], [1345, 1384], [1686, 1725]],
+            [[322, 361]],
+            [[322, 361], [663, 702]],
+            [[322, 361], [663, 702], [1004, 1043]],
+            [[341, 341], [682, 682], [1023, 1023], [1364, 1364], [1705, 1705]]
+        ]
+        vus_zone_size = e_buffer = d_buffer = near_single_side_range = 10
+
+        choose_metric_name_order_list = [
             "Original-F",
             "AUC-ROC",
             "AUC-PR",
@@ -84,22 +101,6 @@ if __name__ == '__main__':
             "DQE",
         ]
 
-    # anomaly event coverage
-    if args.exp_name == "anomaly_event_coverage":
-        json_file_name = "anomaly_event_coverage"
-
-        anomaly_num = 5
-        anomaly_point_len = 40
-        anomaly_ratio = 0.1
-
-        window_length = 2050
-        label_ranges = [
-            [[322, 361], [663, 702], [1004, 1043], [1345, 1384], [1686, 1725]],
-            [[322, 361]],
-            [[341, 341], [682, 682], [1023, 1023], [1364, 1364], [1705, 1705]]
-        ]
-        vus_zone_size = e_buffer = d_buffer = near_single_side_range = 10
-
     # near-miss proximity
     if args.exp_name == "near_miss_proximity":
         json_file_name = "near_miss_proximity"
@@ -107,6 +108,17 @@ if __name__ == '__main__':
         window_length = 300
         label_ranges = [[[100, 119]], [[120, 121]], [[125, 126]], [[130, 131]], [[135, 136]]]
         vus_zone_size = e_buffer = d_buffer = near_single_side_range = 20
+
+        choose_metric_name_order_list = [
+            "Original-F",
+            "AUC-ROC",
+            "AUC-PR",
+            "PA-K",
+            "RF", "eTaF",
+            "VUS-ROC", "VUS-PR", "PATE",
+            "AF",
+            "DQE",
+        ]
 
     # proximity inconsistency
     if args.exp_name == "proximity_inconsistency":
@@ -116,6 +128,20 @@ if __name__ == '__main__':
         label_ranges = [[[49, 51]], [[51, 51]], [[51, 52]], [[51, 53]], [[51, 56]], [[51, 59]]]
         vus_zone_size = e_buffer = d_buffer = near_single_side_range = 10
 
+
+        choose_metric_name_order_list = [
+            "VUS-ROC",
+            "VUS-PR",
+            "PATE",
+            "Original-F",
+            "AUC-ROC",
+            "AUC-PR",
+            "PA-K",
+            "RF", "eTaF",
+            "AF",
+            "DQE",
+        ]
+
     # proximity inconsistency (af)
     if args.exp_name == "proximity_inconsistency_af":
         json_file_name = "proximity_inconsistency_af"
@@ -124,6 +150,15 @@ if __name__ == '__main__':
         window_length = 38
         label_ranges = [[[29, 30], [35, 36]], [[26, 27], [35, 36]], [[29, 30], [34, 35]]]
 
+        choose_metric_name_order_list = [
+            "AF",
+            "Original-F", "AUC-ROC", "AUC-PR",
+            "PA-K",
+            "VUS-ROC", "VUS-PR", "PATE",
+            "RF", "eTaF",
+            "DQE",
+        ]
+
     # false alarm frequency
     if args.exp_name == "false_alarm_frequency":
         json_file_name = "false_alarm_frequency"
@@ -131,6 +166,17 @@ if __name__ == '__main__':
         window_length = 300
         label_ranges = [[[140, 159]], [[149, 150], [226, 233]], [[149, 150], [227, 227], [231, 231], [223, 223], [235, 235], [219, 219], [239, 239], [215, 215], [243, 243]]]
         vus_zone_size = e_buffer = d_buffer = near_single_side_range = 20
+
+        choose_metric_name_order_list = [
+            "Original-F",
+            "AUC-ROC",
+            "AUC-PR",
+            "PA-K",
+            "VUS-ROC", "VUS-PR", "PATE",
+            "AF",
+            "RF", "eTaF",
+            "DQE",
+        ]
 
     # random case
     if args.exp_name == "random_case":
@@ -145,6 +191,45 @@ if __name__ == '__main__':
         random_array = np.random.randint(0, 2, size=window_length)
         random_label_interval_ranges = convert_vector_to_events_PATE(random_array)
         label_ranges.append(random_label_interval_ranges)
+
+        choose_metric_name_order_list = [
+            "AF", "VUS-ROC", "AUC-ROC",
+            "PATE",
+            "Original-F",
+            "PA-K",
+            "AUC-PR",
+            "VUS-PR",
+            "RF",
+            "eTaF",
+            "DQE",
+        ]
+
+    # near_miss_grouping
+    if args.exp_name == "near_miss_grouping":
+        json_file_name = "near_miss_grouping"
+
+        window_length = 300
+        label_ranges = [[[100, 119]],
+                        [[121, 121]],
+                        [[121, 121],[123, 123],[125, 125],[127, 127],[129, 129]],
+                        ]
+        vus_zone_size = e_buffer = d_buffer = near_single_side_range = 20
+
+        choose_metric_name_order_list = [
+            "Original-F",
+            "AUC-PR",
+            "PA-K",
+            "RF", "eTaF",
+
+            "AUC-ROC",
+            "VUS-ROC",
+
+            "AF",
+            "VUS-PR",
+            "PATE",
+
+            "DQE",
+        ]
 
     ordered_num = len(label_ranges)
 

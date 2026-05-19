@@ -28,15 +28,15 @@ if __name__ == '__main__':
 
     res_save_dir = res_dir + "metric_cal_res_windows/"
 
+    dataset_methods_choose_name_list = ['CNN', 'Sub_LOF', 'TimesNet', 'FFT', 'KMeansAD_U']
+
     if args.exp_name == "WSD case":
         # WSD case
         json_file = "094_WSD_id_66_WebService_tr_3309_1st_3914_method_pred_scaled.json"
         dataset_methods_file_list = [json_file]
-        dataset_methods_choose_name_list = ['CNN', 'Sub_LOF', 'TimesNet', 'FFT', "R"]
     elif args.exp_name == "UCR case":
         json_file = "452_UCR_id_150_Facility_tr_10000_1st_35774_method_pred_scaled.json"
         dataset_methods_file_list = [json_file]
-        dataset_methods_choose_name_list = ['CNN', 'KMeansAD_U', "R"]
     else:
         json_file = "808_YAHOO_id_258_WebService_tr_500_1st_142_method_pred_scaled.json"
         dataset_methods_file_list = [json_file]
@@ -96,9 +96,7 @@ if __name__ == '__main__':
                 output_array = MinMaxScaler(feature_range=(0, 1)).fit_transform(
                     output_array.reshape(-1, 1)).ravel().tolist()
 
-            if args.test_time:
-                time_start = time.time()
-            metric_score_dict,_ = get_metrics(output_array, label, slidingWindow=slidingWindow, thre=100, exp_name=args.exp_name)
+            metric_score_dict,_ = get_metrics(output_array, label, slidingWindow=slidingWindow, thre=100, exp_name=args.exp_name, case_analysis=True)
 
             file_method_metric_dict[data_set_choose_file][dataset_methods_choose_name] = metric_score_dict
 

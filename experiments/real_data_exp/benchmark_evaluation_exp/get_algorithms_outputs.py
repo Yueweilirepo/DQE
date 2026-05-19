@@ -70,11 +70,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Running TSB-AD')
     args = parser.parse_args()
 
-    filter_ad_pool = ['SR', 'KMeansAD_U', 'Sub_KNN', 'TimesNet', 'CNN', 'Sub_LOF', 'FFT']
+    filter_ad_pool = ['KMeansAD_U', 'TimesNet', 'CNN', 'Sub_LOF', 'FFT']
 
     dataset_choose_list = [
         "WSD",
-        "YAHOO",
+        # "YAHOO",
         "UCR",
     ]
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     dataset_choose_list = [
         "WSD",
-        "YAHOO",
+        # "YAHOO",
         "UCR",
     ]
 
