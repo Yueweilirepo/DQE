@@ -383,12 +383,21 @@ def main():
         'UCR'
     ]
 
-    all_files = []
+    tuning_data = pd.read_csv("../../../dataset/File_List/TSB-AD-U-Tuning.csv")
+    tuning_data_list = tuning_data.to_numpy().flatten().tolist()
+    tuning_data_index_list = []
+    for item in tuning_data_list:
+        tuning_data_index_list.append(item.split("_")[0])
 
+
+    all_files = []
     ori_file_dir = "../../../dataset/TSB-AD-U/"
+
     for ori_file in os.listdir(ori_file_dir):
         dataset_name = ori_file.split("_")[1]
         if dataset_name not in dataset_name_list:
+            continue
+        if ori_file.split("_")[0] in tuning_data_index_list:
             continue
         all_files.append([ori_file_dir+ori_file])
 

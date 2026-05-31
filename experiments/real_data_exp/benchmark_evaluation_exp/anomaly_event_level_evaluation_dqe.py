@@ -38,6 +38,12 @@ if __name__ == '__main__':
 
     method_dqe_res_dict = {}
 
+    tuning_data = pd.read_csv("../../../dataset/File_List/TSB-AD-U-Tuning.csv")
+    tuning_data_list = tuning_data.to_numpy().flatten().tolist()
+    tuning_data_index_list = []
+    for item in tuning_data_list:
+        tuning_data_index_list.append(item.split("_")[0])
+
     for ori_file in ori_file_list:
         file_index = ori_file.split("_")[0]
         dataset_name = ori_file.split("_")[1]
@@ -49,6 +55,9 @@ if __name__ == '__main__':
         # dataset filter
         dataset_name = ori_file.split("_")[1]
         if dataset_name not in dataset_name_list:
+            continue
+
+        if ori_file.split("_")[0] in tuning_data_index_list:
             continue
 
         ori_data_file_path = ori_data_dir + ori_file

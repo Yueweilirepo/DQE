@@ -36,9 +36,17 @@ name_dict = {
     "dqe": "DQE",
 }
 
+tuning_data = pd.read_csv("../../../dataset/File_List/TSB-AD-U-Tuning.csv")
+tuning_data_list = tuning_data.to_numpy().flatten().tolist()
+tuning_data_index_list = []
+for item in tuning_data_list:
+    tuning_data_index_list.append(item.split("_")[0])
+
 for file_name in os.listdir('../../../dataset/TSB-AD-U/'):
     dataset_name = file_name.split("_")[1]
     if dataset_name not in all_file_folder.keys():
+        continue
+    if file_name.split("_")[0] in tuning_data_index_list:
         continue
     all_file_folder[dataset_name].append('{}_robustness.json'.format(file_name))
 

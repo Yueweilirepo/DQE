@@ -82,9 +82,17 @@ if __name__ == '__main__':
 
     df_exp_files_all = pd.read_csv("../../../dataset/File_List/exp_file_list_all.csv").dropna()
 
+    tuning_data = pd.read_csv("../../../dataset/File_List/TSB-AD-U-Tuning.csv")
+    tuning_data_list = tuning_data.to_numpy().flatten().tolist()
+    tuning_data_index_list = []
+    for item in tuning_data_list:
+        tuning_data_index_list.append(item.split("_")[0])
+
     all_list = df_exp_files_all.squeeze().tolist()
     add_list = []
     for file in all_list:
+        if file.split("_")[0] in tuning_data_index_list:
+            continue
         add_info_file = file.split(".")[0] + "_method_pred_scaled.json"
         add_list.append(file)
 
