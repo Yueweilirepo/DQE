@@ -1,4 +1,4 @@
-<h1 align="center">DQE: A Semantic-Aware Evaluation Metric for Time Series
+<h1 align="center">DQE: Anomaly Event-Centric Detection Quality Evaluation for Time Series Anomaly Detection
 Anomaly Detection</h1>
 
 
@@ -6,9 +6,17 @@ Anomaly Detection</h1>
 
 [//]: # ([//]: # &#40;DQE is designed from a detection semantics perspective, which holistically synthesizes anomaly capture quality, near-miss detection quality, and false alarm detection quality, enabling a fine-grained evaluation.&#41;)
 
-This repository contains the implementation of Detection Quality Evaluation (DQE), a novel metric for time series anomaly detection.
-DQE is designed from a detection semantics perspective. It holistically synthesizes anomaly capture quality, near-miss detection quality, and false alarm detection quality, enabling fine-grained evaluation.
-The full methodology is described in our paper, where extensive experiments on both synthetic and real-world data demonstrate that DQE provides interpretable, reliable, discriminative, and robust evaluations compared with existing metrics.
+[//]: # (This repository contains the implementation of Detection Quality Evaluation &#40;DQE&#41;, a novel metric for time series anomaly detection.)
+
+[//]: # (DQE is designed from a detection semantics perspective. It holistically synthesizes anomaly capture quality, near-miss detection quality, and false alarm detection quality, enabling fine-grained evaluation.)
+
+[//]: # (The full methodology is described in our paper, where extensive experiments on both synthetic and real-world data demonstrate that DQE provides interpretable, reliable, discriminative, and robust evaluations compared with existing metrics.)
+
+This repository provides the implementation of Detection Quality Evaluation (DQE), an anomaly event-centric metric for time series anomaly detection.
+
+DQE evaluates detection quality from a detection semantics perspective by jointly considering anomaly capture, near-miss detection, and false alarms. It provides a fine-grained and interpretable evaluation of anomaly event detection.
+
+The methodology and experimental results are described in our paper. Extensive evaluations on synthetic and real-world datasets demonstrate that DQE provides more discriminative, stable, interpretable, and consistent assessments than existing metrics.
 
 ## Environment
 

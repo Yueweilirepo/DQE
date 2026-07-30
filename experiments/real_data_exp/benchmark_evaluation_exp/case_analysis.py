@@ -96,8 +96,7 @@ if __name__ == '__main__':
                 output_array = MinMaxScaler(feature_range=(0, 1)).fit_transform(
                     output_array.reshape(-1, 1)).ravel().tolist()
 
-            metric_score_dict,_ = get_metrics(output_array, label, slidingWindow=slidingWindow, thre=100, exp_name=args.exp_name, case_analysis=True)
-
+            metric_score_dict,_ = get_metrics(output_array, label, slidingWindow=slidingWindow, thre=100, exp_name=args.exp_name,cal_components=True,per_anomaly_res=True)
             file_method_metric_dict[data_set_choose_file][dataset_methods_choose_name] = metric_score_dict
 
     res_seve_path = res_save_dir + "metric_calc_res_" + file_msg + ".json"

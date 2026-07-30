@@ -155,6 +155,61 @@ def randomness_penalty_coefficient(distances, a, b):
     return P
 
 
+def false_alarm_score(event_lengths, region_length):
+    """
+    Coverage-Fragmentation based false alarm penalty.
+
+    Parameters
+    ----------
+    event_lengths : array-like
+        Lengths of false alarm events.
+        Example: [5, 3, 2] means three false alarm events.
+
+    region_length : float
+        Length of false alarm region |A_fa|.
+
+    Returns
+    -------
+    fa_score : float
+        False alarm quality score in [0, 1].
+        Higher is better.
+    """
+
+    lengths = np.asarray(event_lengths, dtype=float)
+
+    # No false alarms
+    if lengths.size == 0 or np.sum(lengths) <= 0:
+        return 1.0
+
+    # Total false alarm duration
+    L = np.sum(lengths)
+
+    # False alarm region length
+    M = float(region_length)
+
+    # Squared duration term
+    Q = np.sum(lengths ** 2)
+
+    # 1. Coverage
+    S_cov = L / M
+
+    # 2. Fragmentation
+    S_frag = (L ** 2 - Q) / (L ** 2)
+
+    # Numerical stability
+    S_cov = np.clip(S_cov, 0.0, 1.0)
+    S_frag = np.clip(S_frag, 0.0, 1.0)
+
+    # Union penalty
+    P_fa = S_cov + S_frag - S_cov * S_frag
+
+    # Convert penalty to quality score
+    S_fa = 1.0 - P_fa
+
+    return float(np.clip(S_fa, 0.0, 1.0))
+
+
+
 def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, pred_num=None,
                    near_single_side_range=125, cal_components=False, partition_res=None):
     """
@@ -531,33 +586,29 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         fq_dis_e_section = fq_dis_e_section_list[i]
         fq_dis_d_next_section = fq_dis_d_section_list[area_id_next]
 
-        fq_dis_e_end = fq_dis_e_section[1]
-
-        fq_dis_d_start = fq_dis_d_next_section[0]
 
         fq_dis_e_pred_group = fq_dis_e_prediction_group_list[i]
         fq_dis_d_next_pred_group = fq_dis_d_prediction_group_list[area_id_next]
 
         td_fq_dis_e_sum = 0
-        p_direction_dis_list = []
+        p_duration_list = []
 
         for interval_idx, basic_interval in enumerate(fq_dis_e_pred_group):
-            td_fq_dis_e_sum += basic_interval[1] - basic_interval[0]
+            basic_interval_duration = basic_interval[1] - basic_interval[0]
+            p_duration_list.append(basic_interval_duration)
+            # td_fq_dis_e_sum += basic_interval_duration
 
-            p_dis_e = abs(fq_dis_e_end - (basic_interval[1] + basic_interval[0]) / 2)
-            p_direction_dis_list.append(-1 * p_dis_e)
 
-        td_fq_dis_e_list[i] = td_fq_dis_e_sum
+        # td_fq_dis_e_list[i] = td_fq_dis_e_sum
 
-        td_fq_dis_d_sum = 0
+        # td_fq_dis_d_sum = 0
 
         for interval_idx, basic_interval in enumerate(fq_dis_d_next_pred_group):
-            td_fq_dis_d_sum += basic_interval[1] - basic_interval[0]
+            basic_interval_duration = basic_interval[1] - basic_interval[0]
+            p_duration_list.append(basic_interval_duration)
+            # td_fq_dis_d_sum += basic_interval_duration
 
-            p_dis_d = abs((basic_interval[1] + basic_interval[0]) / 2 - fq_dis_d_start)
-            p_direction_dis_list.append(p_dis_d)
-
-        td_fq_dis_d_list[area_id_next] = td_fq_dis_d_sum
+        # td_fq_dis_d_list[area_id_next] = td_fq_dis_d_sum
 
         if fq_dis_e_section[0] <= fq_dis_e_section[1]:
             fq_dis_e_section_len = fq_dis_e_section[1] - fq_dis_e_section[0]
@@ -568,18 +619,21 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         else:
             fq_dis_d_next_section_len = 0
 
-        randomness_penalty_score = randomness_penalty_coefficient(p_direction_dis_list, fq_dis_e_section_len,
-                                                                  fq_dis_d_next_section_len)
+        # randomness_penalty_score = randomness_penalty_coefficient(p_direction_dis_list, fq_dis_e_section_len,
+        #                                                           fq_dis_d_next_section_len)
 
-        fq_dis_pred_group_td_around = td_fq_dis_e_list[i] + td_fq_dis_d_list[i + 1]
+        # fq_dis_pred_group_td_around = td_fq_dis_e_list[i] + td_fq_dis_d_list[i + 1]
 
         dis_section_len = fq_dis_e_section_len + fq_dis_d_next_section_len
-        dis_section_scaled = dis_section_len / 2
+        # dis_section_scaled = dis_section_len / 2
 
-        false_alarm_score = false_alarm_func_liner(fq_dis_pred_group_td_around,
-                                                   dis_section_scaled) if dis_section_len != 0 else 1
+        # false_alarm_score = false_alarm_func_liner(fq_dis_pred_group_td_around,
+        #                                            dis_section_scaled) if dis_section_len != 0 else 1
 
-        score_fq_dis_td = randomness_penalty_score * false_alarm_score
+        # score_fq_dis_td = randomness_penalty_score * false_alarm_score
+        fa_num = len(p_duration_list)
+        score_fq_dis_td = false_alarm_score(p_duration_list, dis_section_len) if dis_section_len > 0 and fa_num > 0 else 1
+
 
         # cal dqe
         precision_tq_pred_group = tq_prediction_group_list[i]
@@ -712,8 +766,10 @@ def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=Fa
     return dqe_res_ts
 
 
-def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_components=False, cal_multi_ts=False,
-        per_anomaly_res=False):
+# def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_components=False, cal_multi_ts=False,
+#         per_anomaly_res=False):
+def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, thresh_range_lower=0.0, thresh_range_upper=1.0,
+        cal_components=False, cal_multi_ts=False, per_anomaly_res=False):
     """
     Evaluate detection quality evaluation score in a threshold-free manner.
 
@@ -761,7 +817,12 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_compone
 
     ts_len = len(y_true)
 
-    thresholds = np.linspace(1, 0, thresh_num + 1)[:-1]
+    thresholds = np.linspace(1, 0, thresh_num + 1)[:-1][::-1]
+
+    if thresh_range_lower < thresh_range_upper:
+        thresholds = thresholds[round(thresh_num*thresh_range_lower):round(thresh_num*thresh_range_upper)]
+    else:
+        raise ValueError("Invalid threshold range.")
 
     # array -> interval_ranges
     gt_interval_ranges = convert_vector_to_events_dqe(y_true)
@@ -1030,7 +1091,7 @@ def cal_dqe_matrix(ts_dict: dict, output_dict: dict, gt_dict: dict, thresh_num=1
 
         dqe_matrix_res = DQE(single_gt,
                              single_output,
-                             near_single_side_range=single_slidingWindow / 2,
+                             near_single_side_range=single_slidingWindow,
                              cal_multi_ts=True,
                              thresh_num=thresh_num)
 
@@ -1155,7 +1216,6 @@ def cal_local_dqe(row_mean_real_detection,
     # Integrating dqe-cap, dqe-nm, and dqe-fa into a unified evaluation metric ( threshold-dependent local dqe).
     local_dqe_value = (row_mean_near_detection
                        + row_mean_real_detection) / 2 * row_mean_false_alarm
-    local_dqe_value = math.sqrt(local_dqe_value)
     return local_dqe_value
 
 

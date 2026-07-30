@@ -28,7 +28,7 @@ class CustomEncoder(json.JSONEncoder):
 if __name__ == '__main__':
     # ArgumentParser
     parser = argparse.ArgumentParser(description='Running DQE synthetic data experiments')
-    parser.add_argument('--exp_name', type=str, default='anomaly_event_coverage')
+    parser.add_argument('--exp_name', type=str, default='near_miss_grouping')
     args = parser.parse_args()
 
     paint_name_list = [
@@ -164,7 +164,9 @@ if __name__ == '__main__':
         json_file_name = "false_alarm_frequency"
 
         window_length = 300
-        label_ranges = [[[140, 159]], [[149, 150], [226, 233]], [[149, 150], [227, 227], [231, 231], [223, 223], [235, 235], [219, 219], [239, 239], [215, 215], [243, 243]]]
+        label_ranges = [[[140, 159]],
+                       [[149, 150], [226, 233]],
+                       [[149, 150], [206, 207], [252, 253], [47, 48], [93, 94]]]
         vus_zone_size = e_buffer = d_buffer = near_single_side_range = 20
 
         choose_metric_name_order_list = [
@@ -211,7 +213,7 @@ if __name__ == '__main__':
         window_length = 300
         label_ranges = [[[100, 119]],
                         [[121, 121]],
-                        [[121, 121],[123, 123],[125, 125],[127, 127],[129, 129]],
+                        [[121, 121], [123, 123], [125, 125], [127, 127], [129, 129], [131, 131]],
                         ]
         vus_zone_size = e_buffer = d_buffer = near_single_side_range = 20
 
@@ -221,11 +223,12 @@ if __name__ == '__main__':
             "PA-K",
             "RF", "eTaF",
 
-            "AUC-ROC",
+            "VUS-PR",
             "VUS-ROC",
 
+            "AUC-ROC",
+
             "AF",
-            "VUS-PR",
             "PATE",
 
             "DQE",

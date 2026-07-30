@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from dqe.dqe_metric import DQE
+from dqe.dqe_metric import DQE, SDQE
 from metrics.metrics_pa import PointAdjustKPercent
 from metrics.pate.PATE_metric import PATE
 from metrics.pate.PATE_utils import convert_events_to_array_PATE, categorize_predicted_ranges_with_ids, \
@@ -44,7 +44,10 @@ def evaluate_all_metrics(pred, labels, vus_zone_size=20, e_buffer=20, d_buffer=2
     PointF1 = grader.metric_PointF1(labels, score=pred, preds=pred)
 
     # DQE
-    dqe_res_ts = DQE(labels,pred,
+    # dqe_res_ts = DQE(labels,pred,
+    #                  near_single_side_range=near_single_side_range,
+    #                  cal_components=True)
+    dqe_res_ts = SDQE(labels,pred,
                      near_single_side_range=near_single_side_range,
                      cal_components=True)
 
@@ -70,7 +73,8 @@ def evaluate_all_metrics(pred, labels, vus_zone_size=20, e_buffer=20, d_buffer=2
         "eTaPR_f1_score": eTaPR_F1,
         "Affliation F1score": Affiliation_F,
 
-        "dqe": dqe_res_ts["dqe"],
+        # "dqe": dqe_res_ts["dqe"],
+        "dqe": dqe_res_ts["sdqe"],
     }
 
     for key in score_list_simple:

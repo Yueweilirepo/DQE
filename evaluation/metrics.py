@@ -4,36 +4,39 @@ from .basic_metrics import basic_metricor, generate_curve
 from metrics.pate.PATE_metric import PATE
 
 
-
-def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre=250,print_msg=True,test_time=True, exp_name=None, case_analysis=False):
+def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre=250, print_msg=False, test_time=True,
+                exp_name=None, ratio=1.0, near_miss_range_size=None, metric_list=None, average_aggregation=False,
+                dynamic_thresh_range=None, cal_components=False, per_anomaly_res=False, thresh_num=100):
     metrics = {}
     metrics_consume_time = {}
 
     th_100_exp_list = [
-    'Standard-F1',
-    'AUC-ROC',
-    'AUC-PR',
+        'Standard-F1',
+        'AUC-ROC',
+        'AUC-PR',
 
-    "PA-K",
+        "PA-K",
 
-    'VUS-ROC',
-    'VUS-PR',
-    'PATE',
+        'VUS-ROC',
+        'VUS-PR',
+        'PATE',
 
-    'R-based-F1',
-    'eTaPR_F1',
-    'Affiliation-F',
-
-    "DQE",
+        'R-based-F1',
+        'eTaPR_F1',
+        'Affiliation-F',
+        "DQE",
     ]
 
-    if exp_name == "AUC-ROC/AUC-PR issue case":
-        exp_list = [
-            'AUC-ROC',
-            'AUC-PR'
-        ]
+    if metric_list != None:
+        exp_list = metric_list
     else:
-        exp_list = th_100_exp_list
+        if exp_name == "AUC-ROC/AUC-PR issue case":
+            exp_list = [
+                'AUC-ROC',
+                'AUC-PR'
+            ]
+        else:
+            exp_list = th_100_exp_list
 
     time_consume_dict = {}
 
@@ -75,9 +78,15 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
         metrics['AUC-PR'] = AUC_PR
 
     if "VUS-PR" in exp_list or "VUS-ROC" in exp_list:
+        if near_miss_range_size != None:
+            single_side_range_size = near_miss_range_size
+        else:
+            single_side_range_size = round(slidingWindow * ratio)
+
         if test_time:
             time_start = time.time()
-        _, _, _, _, _, _, VUS_ROC, VUS_PR = generate_curve(labels.astype(int), score, slidingWindow, version, thre)
+        _, _, _, _, _, _, VUS_ROC, VUS_PR = generate_curve(labels.astype(int), score, single_side_range_size, version,
+                                                           thre)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -90,9 +99,15 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
         metrics['VUS-ROC'] = VUS_ROC
 
     if "PATE" in exp_list:
+        if near_miss_range_size != None:
+            e_buffer = d_buffer = near_miss_range_size
+        else:
+            slidingWindow = round(slidingWindow * ratio)
+            e_buffer = d_buffer = slidingWindow
+
         if test_time:
             time_start = time.time()
-        e_buffer = d_buffer = slidingWindow // 2
+
         pate = PATE(labels, score, e_buffer, d_buffer, Big_Data=True, n_jobs=1, include_zero=False,
                     num_desired_thresholds=thre)
         if test_time:
@@ -106,17 +121,38 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
         metrics['PATE'] = pate
 
     if "DQE" in exp_list:
+        if near_miss_range_size != None:
+            near_single_side_range = near_miss_range_size
+        else:
+            slidingWindow = round(slidingWindow * ratio)
+            near_single_side_range = slidingWindow
+
         if test_time:
             time_start = time.time()
 
-        if case_analysis:
-            per_anomaly_res = True
-            cal_components = True
-        else:
-            per_anomaly_res = False
+        # nm range sensitivity,
+        # default nm range, mean res,
+        # time efficiency,
+        # cal_components = False
+        # per_anomaly_res = False
+
+        # case analysis components
+        # cal_components = True
+        # per_anomaly_res = True
+
+        th_lower = 0.0
+        th_upper = 1.0
+
+        if dynamic_thresh_range != None:
+            # dynamic thresh range
             cal_components = False
-        dqe_res_ts = grader.metric_DQE(labels, score, preds=pred, near_single_side_range=slidingWindow / 2,
-                                       cal_components=cal_components, per_anomaly_res=per_anomaly_res)
+            per_anomaly_res = False
+            th_lower = dynamic_thresh_range[0]
+            th_upper = dynamic_thresh_range[1]
+
+        dqe_res_ts = grader.metric_DQE(labels, score, preds=pred, near_single_side_range=near_single_side_range,
+                                       th_lower=th_lower, th_upper=th_upper, cal_components=cal_components,
+                                       per_anomaly_res=per_anomaly_res, thresh_num=thresh_num)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -138,10 +174,11 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
     if pred is None --> use the oracle threshold
     '''
 
+
     if "Standard-F1" in exp_list:
         if test_time:
             time_start = time.time()
-        PointF1 = grader.metric_PointF1(labels, score, preds=pred)
+        PointF1 = grader.metric_PointF1(labels, score, preds=pred, averaged_aggregation=average_aggregation)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -169,7 +206,7 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
     if "PA-K" in exp_list:
         if test_time:
             time_start = time.time()
-        PointF1PA_K = grader.metric_PointF1PA_K(labels, score, preds=pred)
+        PointF1PA_K = grader.metric_PointF1PA_K(labels, score, preds=pred, averaged_aggregation=average_aggregation)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -183,7 +220,7 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
     if "R-based-F1" in exp_list:
         if test_time:
             time_start = time.time()
-        RF1 = grader.metric_RF1(labels, score, preds=pred)
+        RF1 = grader.metric_RF1(labels, score, preds=pred, averaged_aggregation=average_aggregation)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -193,11 +230,10 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
             metrics_consume_time["R-based-F1"] = time_consume
 
         metrics['R-based-F1'] = RF1
-
     if "Affiliation-F" in exp_list:
         if test_time:
             time_start = time.time()
-        Affiliation_F = grader.metric_Affiliation(labels, score, preds=pred)
+        Affiliation_F = grader.metric_Affiliation(labels, score, preds=pred, averaged_aggregation=average_aggregation)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -207,11 +243,10 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
             metrics_consume_time["Affiliation-F"] = time_consume
 
         metrics['Affiliation-F'] = Affiliation_F
-
     if "eTaPR_F1" in exp_list:
         if test_time:
             time_start = time.time()
-        eTaPR_F1 = grader.metric_eTaPR_F1(labels, score, preds=pred)
+        eTaPR_F1 = grader.metric_eTaPR_F1(labels, score, preds=pred, averaged_aggregation=average_aggregation)
         if test_time:
             time_end = time.time()
             time_consume = time_end - time_start
@@ -222,5 +257,20 @@ def get_metrics(score, labels, slidingWindow=100, pred=None, version='opt', thre
 
         metrics['eTaPR_F1'] = eTaPR_F1
 
-    return metrics,metrics_consume_time
+    if "PATE_F1" in exp_list:
+        if test_time:
+            time_start = time.time()
+        e_buffer = d_buffer = slidingWindow
+        pate_f1 = grader.metric_PATE_F1(labels, score, preds=pred, e_buffer=e_buffer, d_buffer=d_buffer)
+        if test_time:
+            time_end = time.time()
+            time_consume = time_end - time_start
+            time_consume_dict["PATE_F1"] = time_consume
+            if print_msg:
+                print("PATE_F1 time_end - time_start", time_consume)
+            metrics_consume_time["PATE_F1"] = time_consume
+
+        metrics['PATE_F1'] = pate_f1
+
+    return metrics, metrics_consume_time
 

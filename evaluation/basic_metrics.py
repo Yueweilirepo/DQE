@@ -8,7 +8,6 @@ from metrics.eTaPR_pkg import f1_score_etapr
 from metrics.metrics_pa import PointAdjustKPercent
 from metrics.pate.PATE_metric import PATE
 from dqe.dqe_metric import DQE
-from config.dqe_config import parameter_dict
 from metrics.pate.PATE_utils import convert_vector_to_events_PATE
 
 
@@ -216,25 +215,48 @@ class basic_metricor():
 
     def metric_ROC(self, label, score, plot_flag=False):
         return compute_auc(label, score, plot_flag=plot_flag)
-        # return metrics.roc_auc_score(label, score)
 
     def metric_PR(self, label, score, plot_flag=False):
         return compute_auprc(label, score, plot_flag=plot_flag)
-        # return metrics.average_precision_score(label, score)
 
 
-    def metric_PointF1(self, label, score, preds=None):
+    def metric_PointF1(self, label, score, preds=None, averaged_aggregation=False):
         if preds is None:
-            precision, recall, thresholds = metrics.precision_recall_curve(label, score)
-            f1_scores = 2 * (precision * recall) / (precision + recall + 0.00001)
-            F1 = np.max(f1_scores)
-            threshold = thresholds[np.argmax(f1_scores)]
+            if averaged_aggregation:
+                #     mean
+                thresholds = np.linspace(0, 1, 100 + 1)[1:]
+
+                precision = []
+                recall = []
+
+                for th in thresholds:
+                    preds = (score >= th).astype(int)
+
+                    tp = np.sum((preds == 1) & (label == 1))
+                    fp = np.sum((preds == 1) & (label == 0))
+                    fn = np.sum((preds == 0) & (label == 1))
+
+                    p = tp / (tp + fp) if (tp + fp) > 0 else 1.0
+                    r = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+                    precision.append(p)
+                    recall.append(r)
+
+                precision = np.array(precision)
+                recall = np.array(recall)
+                f1_scores = 2 * (precision * recall) / (precision + recall + 0.00001)
+                F1 = np.mean(f1_scores)
+            else:
+                precision, recall, thresholds = metrics.precision_recall_curve(label, score)
+                f1_scores = 2 * (precision * recall) / (precision + recall + 0.00001)
+                F1 = np.max(f1_scores)
+                threshold = thresholds[np.argmax(f1_scores)]
         else:
             Precision, Recall, F, Support = metrics.precision_recall_fscore_support(label, preds, zero_division=0)
             F1 = F[1]
         return F1
 
-    def metric_Affiliation(self, label, score, preds=None):
+    def metric_Affiliation(self, label, score, preds=None, averaged_aggregation=False):
         from .affiliation.generics import convert_vector_to_events
         from .affiliation.metrics import pr_from_events
 
@@ -252,12 +274,19 @@ class basic_metricor():
                 Affiliation_Precision = affiliation_metrics['Affiliation_Precision']
                 Affiliation_Recall = affiliation_metrics['Affiliation_Recall']
                 Affiliation_F = 2 * Affiliation_Precision * Affiliation_Recall / (
-                            Affiliation_Precision + Affiliation_Recall + self.eps)
+                        Affiliation_Precision + Affiliation_Recall + self.eps)
 
                 Affiliation_scores.append(Affiliation_F)
 
             Affiliation_F1_Threshold = thresholds[np.argmax(Affiliation_scores)]
-            Affiliation_F1 = max(Affiliation_scores)
+
+            # mean
+            if averaged_aggregation:
+                Affiliation_scores = np.nan_to_num(Affiliation_scores, nan=0.0)
+                Affiliation_F1 = np.mean(Affiliation_scores)
+            else:
+                Affiliation_scores = np.nan_to_num(Affiliation_scores, nan=0.0)
+                Affiliation_F1 = max(Affiliation_scores)
 
         else:
             events_pred = convert_vector_to_events(preds)
@@ -267,12 +296,12 @@ class basic_metricor():
             Affiliation_Precision = affiliation_metrics['Affiliation_Precision']
             Affiliation_Recall = affiliation_metrics['Affiliation_Recall']
             Affiliation_F1 = 2 * Affiliation_Precision * Affiliation_Recall / (
-                        Affiliation_Precision + Affiliation_Recall + self.eps)
+                    Affiliation_Precision + Affiliation_Recall + self.eps)
         if np.isnan(Affiliation_F1):
             Affiliation_F1 = 0
         return Affiliation_F1
 
-    def metric_RF1(self, label, score, preds=None):
+    def metric_RF1(self, label, score, preds=None, averaged_aggregation=False):
 
         if preds is None:
             thresholds = np.linspace(score.min(), score.max(), 100)
@@ -291,7 +320,11 @@ class basic_metricor():
                 Rf1_scores.append(Rf)
 
             RF1_Threshold = thresholds[np.argmax(Rf1_scores)]
-            RF1 = max(Rf1_scores)
+            # mean
+            if averaged_aggregation:
+                RF1 = np.mean(Rf1_scores)
+            else:
+                RF1 = max(Rf1_scores)
         else:
             Rrecall, ExistenceReward, OverlapReward = self.range_recall_new(label, preds, alpha=0.2)
             Rprecision = self.range_recall_new(preds, label, 0)[0]
@@ -301,7 +334,7 @@ class basic_metricor():
                 RF1 = 2 * Rrecall * Rprecision / (Rprecision + Rrecall)
         return RF1
 
-    def metric_eTaPR_F1(self, label, score, preds=None):
+    def metric_eTaPR_F1(self, label, score, preds=None, averaged_aggregation=False):
         if preds is None:
             thresholds = np.linspace(score.min(), score.max(), 100)
             eTaPR_f1_score_list = []
@@ -318,8 +351,11 @@ class basic_metricor():
                 eTaPR_f1_score_list.append(eTaPR_f1_score)
 
             eTaPR_F1_Threshold = thresholds[np.argmax(eTaPR_f1_score_list)]
-            eTaPR_F1 = max(eTaPR_f1_score_list)
-
+            # mean
+            if averaged_aggregation:
+                eTaPR_F1 = np.mean(eTaPR_f1_score_list)
+            else:
+                eTaPR_F1 = max(eTaPR_f1_score_list)
         else:
             # preds_int = preds.astype(int)
             if not np.any(preds):
@@ -328,24 +364,31 @@ class basic_metricor():
                 eTaPR_precision, eTaPR_recall, eTaPR_F1 = f1_score_etapr.get_eTaPR_fscore(label, preds, theta_p=0.5,
                                                                                           theta_r=0.01,
                                                                                           delta=0)  # Default Settings from the original paper
+            debug = 1
 
         return eTaPR_F1
 
-    def metric_DQE(self, label, score, preds=None, near_single_side_range=None, cal_components=False, per_anomaly_res=False):
+    def metric_DQE(self, label, score, preds=None, near_single_side_range=None, th_lower=0.0, th_upper=1.0, cal_components=False, per_anomaly_res=False,thresh_num=100):
         if preds is not None:
             dqe_res_ts = DQE(label,
-                             preds,
-                             near_single_side_range=near_single_side_range,
-                             cal_components=cal_components,
-                             per_anomaly_res=per_anomaly_res,
-                             )
+                      preds,
+                      near_single_side_range=near_single_side_range,
+                      thresh_range_lower=th_lower,
+                      thresh_range_upper=th_upper,
+                      cal_components=cal_components,
+                      per_anomaly_res=per_anomaly_res,
+                      thresh_num=thresh_num
+                      )
         else:
             dqe_res_ts = DQE(label,
-                             score,
-                             near_single_side_range=near_single_side_range,
-                             cal_components=cal_components,
-                             per_anomaly_res=per_anomaly_res
-                             )
+                          score,
+                          near_single_side_range=near_single_side_range,
+                          thresh_range_lower=th_lower,
+                          thresh_range_upper=th_upper,
+                          cal_components=cal_components,
+                          per_anomaly_res=per_anomaly_res,
+                          thresh_num=thresh_num
+                          )
 
         return dqe_res_ts
 
@@ -393,7 +436,7 @@ class basic_metricor():
 
         return PointF1PA1
 
-    def metric_PointF1PA_K(self, label, score, preds=None):
+    def metric_PointF1PA_K(self, label, score, preds=None, averaged_aggregation=False):
         labels_ranges = convert_vector_to_events_PATE(label)
         window_length = len(label)
         if preds is None:
@@ -413,13 +456,17 @@ class basic_metricor():
                 PointF1PA_K_scores.append(pa_k_score)
 
             PointF1PA_K_Threshold = thresholds[np.argmax(PointF1PA_K_scores)]
-            PointF1PA_K = max(PointF1PA_K_scores)
-
+            # mean
+            if averaged_aggregation:
+                PointF1PA_K = np.mean(PointF1PA_K_scores)
+            else:
+                PointF1PA_K = max(PointF1PA_K_scores)
         else:
             pred_ranges = convert_vector_to_events_PATE(preds)
             PointF1PA_K = PointAdjustKPercent(window_length, labels_ranges, pred_ranges)
 
         return PointF1PA_K
+
 
     def _get_events(self, y_test, outlier=1, normal=0):
         events = dict()
