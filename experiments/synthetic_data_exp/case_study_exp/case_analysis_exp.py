@@ -28,7 +28,7 @@ class CustomEncoder(json.JSONEncoder):
 if __name__ == '__main__':
     # ArgumentParser
     parser = argparse.ArgumentParser(description='Running DQE synthetic data experiments')
-    parser.add_argument('--exp_name', type=str, default='near_miss_grouping')
+    parser.add_argument('--exp_name', type=str, default='false_alarm_frequency')
     args = parser.parse_args()
 
     paint_name_list = [

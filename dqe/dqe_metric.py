@@ -11,40 +11,6 @@ from copy import deepcopy
 from evaluation.slidingWindows import find_length_rank
 
 
-def split_intervals(intervals, split_points):
-    """
-        Split every interval in `intervals` at the given `split_points` that fall
-        strictly inside the interval.
-
-        Parameters
-        ----------
-        intervals : list[list[float]]
-            List of [start, end] pairs to be subdivided.
-        split_points : list[float]
-            Points at which to split.  They must be provided in ascending order
-            and without duplicates.
-
-        Returns
-        -------
-        list[list[float]]
-            Flat list of [start, end] sub-intervals produced by the splits.
-        """
-
-    # Initialize the result list
-    result = []
-
-    # Iterate through each interval in the 2D list a
-    for interval in intervals:
-        start, end = interval
-        # Get the split points within the current interval
-        current_splits = [start] + [point for point in split_points if start < point < end] + [end]
-
-        # Generate new sub-intervals based on the split points
-        for i in range(len(current_splits) - 1):
-            result.append([current_splits[i], current_splits[i + 1]])
-
-    return result
-
 
 def pred_in_area(pred, area):
     # Check whether a prediction interval lies entirely within a given area.
@@ -81,78 +47,6 @@ def ddl_func(x, max_area_len, gama=1):
     parameter_a = 1 / max_area_len ** gama
     score = parameter_a * (max_area_len - x) ** gama
     return score
-
-
-def false_alarm_func_liner(x, dis_range=100):
-    """
-        Compute a linear decay score for false alarm based on total duration.
-
-        The score decays linearly from 1 to 0 as the total duration increases from 0 to
-        `dis_range`. Distances beyond `dis_range` receive zero penalty.
-
-        Parameters
-        ----------
-        x : float
-            Total duration of false alarms.
-        dis_range : float, optional
-            Threshold on total duration.
-            If $x$ exceeds this threshold, the false alarm penalty reaches its maximum (i.e., the score is 0).
-
-        Returns
-        -------
-        float
-            False alarm score in [0, 1]:
-        """
-    if x > dis_range:
-        score = 0
-    else:
-        score = ddl_func(x, dis_range)
-    return score
-
-
-def randomness_penalty_coefficient(distances, a, b):
-    """
-    Randomness Penalty Coefficient (distance range -a ~ b)
-
-    Parameters
-    ----------
-    distances : 1-D array_like
-        Distances from midpoints of detection events to local anomaly event.
-    a, b : float > 0
-        Left and right boundaries of temporal differences in the false alarm subregion.
-
-    Returns
-    -------
-    float
-        Randomness penalty coefficient P ∈ [0,1];
-        Low randomness → P approaches 1,
-        High randomness → P approaches 0
-    """
-    distances = np.asarray(distances, dtype=float)
-    if distances.size == 0 or (a + b) <= 1:
-        return 1.0
-
-    # 1. Clip to [-a, b]
-    distances = np.clip(distances, -a, b)
-
-    # 2. Histogram: bin length = 1, total K bins
-    K = int(np.ceil(a + b))
-    # Divide [-a, b] into K equal segments
-    bins = np.linspace(-a, b, K + 1)  # left-closed, right-closed, K+1 boundaries
-    ori_counts, _ = np.histogram(distances, bins=bins)
-    counts = (ori_counts >= 1).astype(int)
-
-    # 3. Entropy
-    total = counts.sum()
-    if total == 0:
-        return 1.0
-    p_nonzero = counts[counts > 0] / total
-    H = -np.sum(p_nonzero * np.log2(p_nonzero))
-
-    # 4. Randomness score S and penalty coefficient P
-    S = H / np.log2(K)
-    P = 1.0 - S
-    return P
 
 
 def false_alarm_score(event_lengths, region_length):
@@ -590,25 +484,17 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         fq_dis_e_pred_group = fq_dis_e_prediction_group_list[i]
         fq_dis_d_next_pred_group = fq_dis_d_prediction_group_list[area_id_next]
 
-        td_fq_dis_e_sum = 0
         p_duration_list = []
 
         for interval_idx, basic_interval in enumerate(fq_dis_e_pred_group):
             basic_interval_duration = basic_interval[1] - basic_interval[0]
             p_duration_list.append(basic_interval_duration)
-            # td_fq_dis_e_sum += basic_interval_duration
 
-
-        # td_fq_dis_e_list[i] = td_fq_dis_e_sum
-
-        # td_fq_dis_d_sum = 0
 
         for interval_idx, basic_interval in enumerate(fq_dis_d_next_pred_group):
             basic_interval_duration = basic_interval[1] - basic_interval[0]
             p_duration_list.append(basic_interval_duration)
-            # td_fq_dis_d_sum += basic_interval_duration
 
-        # td_fq_dis_d_list[area_id_next] = td_fq_dis_d_sum
 
         if fq_dis_e_section[0] <= fq_dis_e_section[1]:
             fq_dis_e_section_len = fq_dis_e_section[1] - fq_dis_e_section[0]
@@ -619,18 +505,9 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         else:
             fq_dis_d_next_section_len = 0
 
-        # randomness_penalty_score = randomness_penalty_coefficient(p_direction_dis_list, fq_dis_e_section_len,
-        #                                                           fq_dis_d_next_section_len)
-
-        # fq_dis_pred_group_td_around = td_fq_dis_e_list[i] + td_fq_dis_d_list[i + 1]
 
         dis_section_len = fq_dis_e_section_len + fq_dis_d_next_section_len
-        # dis_section_scaled = dis_section_len / 2
 
-        # false_alarm_score = false_alarm_func_liner(fq_dis_pred_group_td_around,
-        #                                            dis_section_scaled) if dis_section_len != 0 else 1
-
-        # score_fq_dis_td = randomness_penalty_score * false_alarm_score
         fa_num = len(p_duration_list)
         score_fq_dis_td = false_alarm_score(p_duration_list, dis_section_len) if dis_section_len > 0 and fa_num > 0 else 1
 
