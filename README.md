@@ -12,11 +12,7 @@ Anomaly Detection</h1>
 
 [//]: # (The full methodology is described in our paper, where extensive experiments on both synthetic and real-world data demonstrate that DQE provides interpretable, reliable, discriminative, and robust evaluations compared with existing metrics.)
 
-This repository provides the implementation of Detection Quality Evaluation (DQE), an anomaly event-centric metric for time series anomaly detection.
-
-DQE evaluates detection quality from a detection semantics perspective by jointly considering anomaly capture, near-miss detection, and false alarms. It provides a fine-grained and interpretable evaluation of anomaly event detection.
-
-The methodology and experimental results are described in our paper. Extensive evaluations on synthetic and real-world datasets demonstrate that DQE provides more discriminative, stable, interpretable, and consistent assessments than existing metrics.
+This repository provides the implementation of Detection Quality Evaluation (DQE), an anomaly event-centric metric for time series anomaly detection. DQE evaluates detection quality from a detection semantics perspective by jointly considering anomaly capture, near-miss detection, and false alarms. It provides a fine-grained and interpretable evaluation of anomaly event detection. The methodology and experimental results are described in our paper. Extensive evaluations on synthetic and real-world datasets demonstrate that DQE provides more discriminative, stable, interpretable, and consistent assessments than existing metrics.
 
 ## Environment
 
@@ -178,6 +174,22 @@ Execute the Python script `get_mean_result.py` to obtain the average sequence-le
 python get_mean_result.py
 ```
 
+
+[//]: # (Execute the Python script `get_evaluation_results_near_miss_range_sensitivity.py` for producing evaluation near-miss range sensitivity of different metrics by entering the following command:)
+Execute the Python script `get_evaluation_results_near_miss_range_sensitivity.py` to evaluate the sensitivity of different metrics to the near-miss range by running the following command:
+
+```bash
+python get_evaluation_results_near_miss_range_sensitivity.py
+```
+
+
+[//]: # (Execute the Python script `get_mean_result_near_miss_range_sensitivity.py` to obtain the average sequence-level results across all time series for each sub-dataset on different near-miss range using the following command:)
+Execute the Python script `get_mean_result_near_miss_range_sensitivity.py` to obtain the average sequence-level results across all time series for each sub-dataset under different near-miss ranges using the following command:
+
+```bash
+python get_mean_result_near_miss_range_sensitivity.py
+```
+
 [//]: # (Execute the Python script `case_analysis.py` for producing results of case studies together with the corresponding component-level results for each anomaly event reported in paper by entering the following command:)
 
 Execute the Python script `case_analysis.py` for producing the case-study results together with the component-level results of each anomaly event reported in the paper, using the following command:
@@ -188,8 +200,29 @@ python case_analysis.py --exp_name "UCR case"
 
 The parameter `exp_name` can be set to one of the following values: ["UCR case", "WSD case", "AUC-ROC/AUC-PR issue case"]. 
 
+[//]: # (Execute the Python script `case_analysis_dynamic_thresh.py` for producing the case-study results of different dynamic thresholds reported in the paper, using the following command:)
+Execute `case_analysis_dynamic_thresh.py` to reproduce the case-study results under different dynamic thresholds reported in the paper using the following command:
+
+```bash
+python case_analysis_dynamic_thresh.py --exp_name "UCR case"
+```
+
+[//]: # (Execute `case_analysis_thresh_num.py` to reproduce the case-study results under different threshold number reported in the paper using the following command:)
+Execute `case_analysis_thresh_num.py` to reproduce the case-study results under different numbers of thresholds reported in the paper using the following command:
+
+```bash
+python case_analysis_thresh_num.py --exp_name "UCR case"
+```
+
+[//]: # (Execute `case_analysis_aggregation.py` to reproduce the case-study results of averaging aggregation strategy to threshold-dependent metrics reported in the paper using the following command:)
+Execute `case_analysis_aggregation.py` to reproduce the case-study results of the averaging aggregation strategy for threshold-dependent metrics reported in the paper using the following command:
+
+```bash
+python case_analysis_aggregation.py --exp_name "UCR case"
+```
 
 To get the anomaly-level evaluation results of DQE, execute the Python script `anomaly_event_level_evaluation_dqe.py` by entering the following command:
+
 
 ```bash
 python anomaly_event_level_evaluation_dqe.py --exp_name "UCR"

@@ -58,13 +58,13 @@ if __name__ == '__main__':
 
     ratio_list = [2.0, 1.8, 1.6, 1.4, 1.2, 1.0, 0.8, 0.6, 0.4, 0.2]
     dataset_dir = "../../../dataset/"
-    res_dir = "../../../results/TSB_AD/"
     method_pred_file_dir = dataset_dir + "methods_pred_res/"
     ori_data_dir = dataset_dir + "TSB-AD-U/"
 
     exp_list = ratio_list
 
     for param_vlue in exp_list:
+        res_dir = "../../../results/TSB_AD/"
         dataset_res_root_dir = res_dir + "dataset_nm_size_exp" + "_" + str(param_vlue).split(".")[0] + "_" + str(param_vlue).split(".")[1] + "/"
 
         create_path(dataset_res_root_dir)
