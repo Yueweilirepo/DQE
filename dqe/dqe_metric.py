@@ -10,7 +10,28 @@ from sortedcontainers import SortedSet
 from copy import deepcopy
 from evaluation.slidingWindows import find_length_rank
 
+def average_event_length_np(arr):
+    arr = (np.asarray(arr) == 1).astype(np.int8)
+    padded = np.concatenate(([0], arr, [0]))
+    idx = np.flatnonzero(np.diff(padded))
+    if idx.size == 0:
+        return 0
+    return (idx[1::2] - idx[0::2]).mean()
 
+def compute_near_miss_range(y_true, sliding_window_max=None):
+    y_true = np.asarray(y_true)
+    n_zero = int((y_true == 0).sum())
+
+    upper = n_zero / 11.0
+    lower = (sliding_window_max if sliding_window_max is not None else 1) - 1
+    lower = max(lower, 0)
+
+    near_single_side_range = average_event_length_np(y_true)
+
+    if upper < lower:
+        return int(min(near_single_side_range, upper))
+
+    return int(np.clip(near_single_side_range, lower, upper))
 
 def pred_in_area(pred, area):
     # Check whether a prediction interval lies entirely within a given area.
@@ -162,47 +183,114 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
 
         integral_subsection_list = partition_res["integral_subsection_list"]
     else:
-        # area list
-        fq_dis_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
-        fq_dis_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
-        fq_near_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
-        fq_near_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
+        if len(tq_section_list) == 0 or tq_section_list == [[0, 0]]:
+            # 当成就一个区域
+            tq_section_list = [[0,0]]
 
-        integral_subsection_list = []
+            fq_dis_e_section_list = [[0,0]]
+            fq_dis_d_section_list = [[],[0,ts_len]]
+            fq_near_e_section_list = [[0,0]]
+            fq_near_d_section_list = [[],[0,0]]
+            integral_subsection_list = [[0,0],[0,0],[0,0],[0,0],[0,ts_len]]
+        else:
+            # area list
+            fq_dis_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
+            fq_dis_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
+            fq_near_e_section_list = [[] for _ in range(gt_num)]  # index:0-(n-1)
+            fq_near_d_section_list = [[] for _ in range(gt_num + 1)]  # index:1-n
 
-        for i, tq_section_i in enumerate(tq_section_list):
-            # tq_i
-            tq_section_i_start, tq_section_i_end = tq_section_i
+            integral_subsection_list = []
 
-            if i == 0:
-                if gt_num == 1:
+            for i, tq_section_i in enumerate(tq_section_list):
+                # tq_i
+                tq_section_i_start, tq_section_i_end = tq_section_i
+
+                if i == 0:
+                    if gt_num == 1:
+                        # get position
+                        # fq_near_early_i position
+                        fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
+                        fq_near_e_section_i_end = tq_section_i_start
+
+                        # fq_near_delay_i_next position
+                        fq_near_d_section_i_next_start = tq_section_i_end
+                        fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, ts_len)
+
+                        # fq_near
+                        # fq_near_early_i
+                        fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+
+                        # next section
+                        # fq_near_delay_i_next
+                        fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start,
+                                                         fq_near_d_section_i_next_end]
+
+                        # fq_distant
+                        # fq_distant_early_i
+                        fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+
+                        # next section
+                        # fq_distant_delay_i_next
+                        fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
+
+                        # add subsection
+                        integral_subsection_list.append(fq_dis_e_section_list[i])
+                        integral_subsection_list.append(fq_near_e_section_list[i])
+                        integral_subsection_list.append(list(tq_section_i))
+                        integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                        integral_subsection_list.append(fq_dis_d_section_list[i + 1])
+                    else:
+                        # get position
+                        fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
+                        fq_near_e_section_i_end = tq_section_i_start
+
+                        tq_section_i_next_start, tq_section_i_next_end = tq_section_list[i + 1]
+
+                        fq_near_d_section_i_next_start = tq_section_i_end
+                        fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range,
+                                                           tq_section_i_next_start)
+
+                        # fq_near
+                        fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+
+                        # next section
+                        fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
+
+                        # fq_distant
+                        # fq_distant_early_i
+                        fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+
+                        # add subsection
+                        integral_subsection_list.append(fq_dis_e_section_list[i])
+                        integral_subsection_list.append(fq_near_e_section_list[i])
+                        integral_subsection_list.append(list(tq_section_i))
+                        integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                elif i == gt_num - 1:
                     # get position
-                    # fq_near_early_i position
-                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
+                    tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
+
+                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
                     fq_near_e_section_i_end = tq_section_i_start
 
-                    # fq_near_delay_i_next position
                     fq_near_d_section_i_next_start = tq_section_i_end
                     fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, ts_len)
 
-                    # fq_near
-                    # fq_near_early_i
-                    fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+                    fq_near_d_i_end = fq_near_d_section_list[i][1]
 
-                    # next section
-                    # fq_near_delay_i_next
-                    fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start,
-                                                     fq_near_d_section_i_next_end]
+                    # fq_near
+                    fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+                    fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
 
                     # fq_distant
-                    # fq_distant_early_i
-                    fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+                    fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
+                    fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
+                    fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
 
                     # next section
-                    # fq_distant_delay_i_next
                     fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
 
                     # add subsection
+                    integral_subsection_list.append(fq_dis_d_section_list[i])
                     integral_subsection_list.append(fq_dis_e_section_list[i])
                     integral_subsection_list.append(fq_near_e_section_list[i])
                     integral_subsection_list.append(list(tq_section_i))
@@ -210,88 +298,31 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
                     integral_subsection_list.append(fq_dis_d_section_list[i + 1])
                 else:
                     # get position
-                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
-                    fq_near_e_section_i_end = tq_section_i_start
-
+                    tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
                     tq_section_i_next_start, tq_section_i_next_end = tq_section_list[i + 1]
 
+                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
+                    fq_near_e_section_i_end = tq_section_i_start
+
                     fq_near_d_section_i_next_start = tq_section_i_end
-                    fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range,
-                                                       tq_section_i_next_start)
+                    fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, tq_section_i_next_start)
+
+                    fq_near_d_i_end = fq_near_d_section_list[i][1]
 
                     # fq_near
                     fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
-
-                    # next section
                     fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
 
                     # fq_distant
-                    # fq_distant_early_i
-                    fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+                    fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
+                    fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
+                    fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
 
-                    # add subsection
+                    integral_subsection_list.append(fq_dis_d_section_list[i])
                     integral_subsection_list.append(fq_dis_e_section_list[i])
                     integral_subsection_list.append(fq_near_e_section_list[i])
                     integral_subsection_list.append(list(tq_section_i))
                     integral_subsection_list.append(fq_near_d_section_list[i + 1])
-            elif i == gt_num - 1:
-                # get position
-                tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
-
-                fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
-                fq_near_e_section_i_end = tq_section_i_start
-
-                fq_near_d_section_i_next_start = tq_section_i_end
-                fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, ts_len)
-
-                fq_near_d_i_end = fq_near_d_section_list[i][1]
-
-                # fq_near
-                fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
-                fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
-
-                # fq_distant
-                fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
-                fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-
-                # next section
-                fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
-
-                # add subsection
-                integral_subsection_list.append(fq_dis_d_section_list[i])
-                integral_subsection_list.append(fq_dis_e_section_list[i])
-                integral_subsection_list.append(fq_near_e_section_list[i])
-                integral_subsection_list.append(list(tq_section_i))
-                integral_subsection_list.append(fq_near_d_section_list[i + 1])
-                integral_subsection_list.append(fq_dis_d_section_list[i + 1])
-            else:
-                # get position
-                tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
-                tq_section_i_next_start, tq_section_i_next_end = tq_section_list[i + 1]
-
-                fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
-                fq_near_e_section_i_end = tq_section_i_start
-
-                fq_near_d_section_i_next_start = tq_section_i_end
-                fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, tq_section_i_next_start)
-
-                fq_near_d_i_end = fq_near_d_section_list[i][1]
-
-                # fq_near
-                fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
-                fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
-
-                # fq_distant
-                fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
-                fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-
-                integral_subsection_list.append(fq_dis_d_section_list[i])
-                integral_subsection_list.append(fq_dis_e_section_list[i])
-                integral_subsection_list.append(fq_near_e_section_list[i])
-                integral_subsection_list.append(list(tq_section_i))
-                integral_subsection_list.append(fq_near_d_section_list[i + 1])
 
     # detection event group
     # integral section index 0 to N
@@ -520,6 +551,9 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         else:
             detected_score = 0
 
+        if area[0] == area[1]:
+            detected_score = 1
+            score_fq_near = 1
 
         local_tqe = cal_local_dqe(detected_score, score_fq_near, score_fq_dis_td)
 
@@ -544,7 +578,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         }
 
 
-def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=False, per_anomaly_res=False):
+def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=False, per_anomaly_res=False, sliding_window_max=None):
     """
     Evaluate binary detection results and compute the final single-threshold SDQE score.
 
@@ -578,9 +612,19 @@ def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=Fa
                 returned only when per_anomaly_res=True.
     """
 
-    ts_len = len(y_true)
+    y_true = np.array(y_true)
+    ts_len = y_true.shape[0]
+
+    if near_single_side_range is None:
+        near_single_side_range = compute_near_miss_range(y_true, sliding_window_max=sliding_window_max)
+
     gt_interval_ranges = convert_vector_to_events_dqe(y_true)
-    gt_num = len(gt_interval_ranges)
+    if len(gt_interval_ranges) == 0:
+        # 当成就一个区域
+        gt_interval_ranges = [[0, 0]]
+        gt_num = 1
+    else:
+        gt_num = len(gt_interval_ranges)
 
     pred_interval_ranges = convert_vector_to_events_dqe(binary_predicted)
     pred_num = len(pred_interval_ranges)
@@ -692,7 +736,10 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, thresh_rang
             returned only when per_anomaly_res=True.
     """
 
-    ts_len = len(y_true)
+    y_true = np.array(y_true)
+    ts_len = y_true.shape[0]
+    if near_single_side_range is None:
+        near_single_side_range = compute_near_miss_range(y_true, sliding_window_max=sliding_window_max)
 
     thresholds = np.linspace(1, 0, thresh_num + 1)[:-1][::-1]
 
@@ -727,39 +774,107 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, thresh_rang
 
         integral_subsection_list = []
         tq_section_list = gt_interval_ranges
-        for i, tq_section_i in enumerate(tq_section_list):
-            # tq_i
-            tq_section_i_start, tq_section_i_end = tq_section_i
 
-            if i == 0:
-                if gt_num == 1:
+        if len(tq_section_list) == 0 or gt_interval_ranges == [[0, 0]]:
+            # 当成就一个区域
+            gt_interval_ranges = [[0,0]]
+
+            fq_dis_e_section_list = [[0,0]]
+            fq_dis_d_section_list = [[],[0,ts_len]]
+            fq_near_e_section_list = [[0,0]]
+            fq_near_d_section_list = [[],[0,0]]
+            integral_subsection_list = [[0,0],[0,0],[0,0],[0,0],[0,ts_len]]
+        else:
+            for i, tq_section_i in enumerate(tq_section_list):
+                # tq_i
+                tq_section_i_start, tq_section_i_end = tq_section_i
+
+                if i == 0:
+                    if gt_num == 1:
+                        # get position
+                        # fq_near_early_i position
+                        fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
+                        fq_near_e_section_i_end = tq_section_i_start
+
+                        # fq_near_delay_i_next position
+                        fq_near_d_section_i_next_start = tq_section_i_end
+                        fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, ts_len)
+
+                        # fq_near
+                        # fq_near_early_i
+                        fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+
+                        # next section
+                        # fq_near_delay_i_next
+                        fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start,
+                                                         fq_near_d_section_i_next_end]
+
+                        # fq_distant
+                        # fq_distant_early_i
+                        fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+
+                        # next section
+                        # fq_distant_delay_i_next
+                        fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
+
+                        # add subsection
+                        integral_subsection_list.append(fq_dis_e_section_list[i])
+                        integral_subsection_list.append(fq_near_e_section_list[i])
+                        integral_subsection_list.append(list(tq_section_i))
+                        integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                        integral_subsection_list.append(fq_dis_d_section_list[i + 1])
+                    else:
+                        # get position
+                        fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
+                        fq_near_e_section_i_end = tq_section_i_start
+
+                        tq_section_i_next_start, tq_section_i_next_end = tq_section_list[i + 1]
+
+                        fq_near_d_section_i_next_start = tq_section_i_end
+                        fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range,
+                                                           tq_section_i_next_start)
+
+                        # fq_near
+                        fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+
+                        # next section
+                        fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
+
+                        # fq_distant
+                        # fq_distant_early_i
+                        fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+
+                        # add subsection
+                        integral_subsection_list.append(fq_dis_e_section_list[i])
+                        integral_subsection_list.append(fq_near_e_section_list[i])
+                        integral_subsection_list.append(list(tq_section_i))
+                        integral_subsection_list.append(fq_near_d_section_list[i + 1])
+                elif i == gt_num - 1:
                     # get position
-                    # fq_near_early_i position
-                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
+                    tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
+
+                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
                     fq_near_e_section_i_end = tq_section_i_start
 
-                    # fq_near_delay_i_next position
                     fq_near_d_section_i_next_start = tq_section_i_end
                     fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, ts_len)
 
-                    # fq_near
-                    # fq_near_early_i
-                    fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+                    fq_near_d_i_end = fq_near_d_section_list[i][1]
 
-                    # next section
-                    # fq_near_delay_i_next
-                    fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start,
-                                                     fq_near_d_section_i_next_end]
+                    # fq_near
+                    fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
+                    fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
 
                     # fq_distant
-                    # fq_distant_early_i
-                    fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+                    fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
+                    fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
+                    fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
 
                     # next section
-                    # fq_distant_delay_i_next
                     fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
 
                     # add subsection
+                    integral_subsection_list.append(fq_dis_d_section_list[i])
                     integral_subsection_list.append(fq_dis_e_section_list[i])
                     integral_subsection_list.append(fq_near_e_section_list[i])
                     integral_subsection_list.append(list(tq_section_i))
@@ -767,89 +882,31 @@ def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, thresh_rang
                     integral_subsection_list.append(fq_dis_d_section_list[i + 1])
                 else:
                     # get position
-                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, 0)
-                    fq_near_e_section_i_end = tq_section_i_start
-
+                    tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
                     tq_section_i_next_start, tq_section_i_next_end = tq_section_list[i + 1]
 
+                    fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
+                    fq_near_e_section_i_end = tq_section_i_start
+
                     fq_near_d_section_i_next_start = tq_section_i_end
-                    fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range,
-                                                       tq_section_i_next_start)
+                    fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, tq_section_i_next_start)
+
+                    fq_near_d_i_end = fq_near_d_section_list[i][1]
 
                     # fq_near
                     fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
-
-                    # next section
                     fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
 
                     # fq_distant
-                    # fq_distant_early_i
-                    fq_dis_e_section_list[i] = [0, fq_near_e_section_i_start]
+                    fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
+                    fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
+                    fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
 
-                    # add subsection
+                    integral_subsection_list.append(fq_dis_d_section_list[i])
                     integral_subsection_list.append(fq_dis_e_section_list[i])
                     integral_subsection_list.append(fq_near_e_section_list[i])
                     integral_subsection_list.append(list(tq_section_i))
                     integral_subsection_list.append(fq_near_d_section_list[i + 1])
-            elif i == gt_num - 1:
-                # get position
-                tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
-
-                fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
-                fq_near_e_section_i_end = tq_section_i_start
-
-                fq_near_d_section_i_next_start = tq_section_i_end
-                fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, ts_len)
-
-                fq_near_d_i_end = fq_near_d_section_list[i][1]
-
-                # fq_near
-                fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
-                fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
-
-                # fq_distant
-                fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
-                fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-
-                # next section
-                fq_dis_d_section_list[i + 1] = [fq_near_d_section_i_next_end, ts_len]
-
-                # add subsection
-                integral_subsection_list.append(fq_dis_d_section_list[i])
-                integral_subsection_list.append(fq_dis_e_section_list[i])
-                integral_subsection_list.append(fq_near_e_section_list[i])
-                integral_subsection_list.append(list(tq_section_i))
-                integral_subsection_list.append(fq_near_d_section_list[i + 1])
-                integral_subsection_list.append(fq_dis_d_section_list[i + 1])
-            else:
-                # get position
-                tq_section_i_last_start, tq_section_i_last_end = tq_section_list[i - 1]
-                tq_section_i_next_start, tq_section_i_next_end = tq_section_list[i + 1]
-
-                fq_near_e_section_i_start = max(tq_section_i_start - near_single_side_range, tq_section_i_last_end)
-                fq_near_e_section_i_end = tq_section_i_start
-
-                fq_near_d_section_i_next_start = tq_section_i_end
-                fq_near_d_section_i_next_end = min(tq_section_i_end + near_single_side_range, tq_section_i_next_start)
-
-                fq_near_d_i_end = fq_near_d_section_list[i][1]
-
-                # fq_near
-                fq_near_e_section_list[i] = [fq_near_e_section_i_start, fq_near_e_section_i_end]
-                fq_near_d_section_list[i + 1] = [fq_near_d_section_i_next_start, fq_near_d_section_i_next_end]
-
-                # fq_distant
-                fq_dis_section_i_mid = (fq_near_d_i_end + fq_near_e_section_i_start) / 2
-                fq_dis_d_section_list[i] = [fq_near_d_i_end, fq_dis_section_i_mid]
-                fq_dis_e_section_list[i] = [fq_dis_section_i_mid, fq_near_e_section_i_start]
-
-                integral_subsection_list.append(fq_dis_d_section_list[i])
-                integral_subsection_list.append(fq_dis_e_section_list[i])
-                integral_subsection_list.append(fq_near_e_section_list[i])
-                integral_subsection_list.append(list(tq_section_i))
-                integral_subsection_list.append(fq_near_d_section_list[i + 1])
-
 
         partition_res = {
             "fq_dis_e_section_list": fq_dis_e_section_list,
