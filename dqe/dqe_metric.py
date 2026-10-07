@@ -578,7 +578,7 @@ def DQE_section(tq_section_list, prediction_section_list, ts_len, gt_num=None, p
         }
 
 
-def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=False, per_anomaly_res=False, sliding_window_max=None):
+def SDQE(y_true, binary_predicted, near_single_side_range=None, cal_components=False, per_anomaly_res=False, sliding_window_max=None):
     """
     Evaluate binary detection results and compute the final single-threshold SDQE score.
 
@@ -689,8 +689,8 @@ def SDQE(y_true, binary_predicted, near_single_side_range=125, cal_components=Fa
 
 # def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, cal_components=False, cal_multi_ts=False,
 #         per_anomaly_res=False):
-def DQE(y_true, y_score, near_single_side_range=125, thresh_num=100, thresh_range_lower=0.0, thresh_range_upper=1.0,
-        cal_components=False, cal_multi_ts=False, per_anomaly_res=False):
+def DQE(y_true, y_score, near_single_side_range=None, thresh_num=100, thresh_range_lower=0.0, thresh_range_upper=1.0,
+        cal_components=False, cal_multi_ts=False, per_anomaly_res=False,sliding_window_max=None):
     """
     Evaluate detection quality evaluation score in a threshold-free manner.
 
