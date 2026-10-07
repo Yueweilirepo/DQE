@@ -18,15 +18,27 @@ def average_event_length_np(arr):
         return 0
     return (idx[1::2] - idx[0::2]).mean()
 
+def event_stats_np(arr):
+    arr = (np.asarray(arr) == 1).astype(np.int8)
+    padded = np.concatenate(([0], arr, [0]))
+    idx = np.flatnonzero(np.diff(padded))
+    if idx.size == 0:
+        return 0, 0
+    lengths = idx[1::2] - idx[0::2]
+    return lengths.mean(), lengths.size
+
 def compute_near_miss_range(y_true, sliding_window_max=None):
     y_true = np.asarray(y_true)
     n_zero = int((y_true == 0).sum())
 
-    upper = n_zero / 11.0
+    mean_len, n_events = event_stats_np(y_true)
+
+    upper = int(n_zero * 1 / 11 / 2 / n_events) if n_events > 0 else int(n_zero * 1 / 11 / 2)
+
     lower = (sliding_window_max if sliding_window_max is not None else 1) - 1
     lower = max(lower, 0)
 
-    near_single_side_range = average_event_length_np(y_true)
+    near_single_side_range = mean_len
 
     if upper < lower:
         return int(min(near_single_side_range, upper))
