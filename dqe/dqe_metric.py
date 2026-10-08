@@ -31,14 +31,11 @@ def compute_near_miss_range(y_true, sliding_window_max=None):
     y_true = np.asarray(y_true)
     n_zero = int((y_true == 0).sum())
 
-    mean_len, n_events = event_stats_np(y_true)
-
-    upper = int(n_zero * 1 / 11 / 2 / n_events) if n_events > 0 else int(n_zero * 1 / 11 / 2)
-
+    upper = n_zero / 11.0 / 2
     lower = (sliding_window_max if sliding_window_max is not None else 1) - 1
     lower = max(lower, 0)
 
-    near_single_side_range = mean_len
+    near_single_side_range = average_event_length_np(y_true)
 
     if upper < lower:
         return int(min(near_single_side_range, upper))
